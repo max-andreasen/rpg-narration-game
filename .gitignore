@@ -217,3 +217,5 @@ __marimo__/
 
 .env
 test_db.py
+__pycache__/
+*.pyc
