@@ -11,17 +11,45 @@ uses that output as a response to the clients. Also calls
 the other model (state_management.py) which handles the states. 
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
 from session import game_session
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
+from websocket_manager import ws_manager
 
 app = FastAPI()
 
 class PlayerMessage(BaseModel):
     player_id: str
     message: str
+
+# Websocket endpoint just handles websocket connection to clients. Seperate from game session.
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+
+    # Setting up the connection with an already existing player id
+    player_id = websocket.query_params.get("player_id")
+    if not player_id:
+        await websocket.close(code=4000)
+        return 
+    if player_id not in game_session.get_players():
+        await websocket.close(code=1003)
+        return
+    await ws_manager.connect(player_id, websocket)
+    await ws_manager.private_message(player_id, f"Player {player_id} connected successfully!")
+
+    # The websocket session
+    try: 
+        while True:
+            # Waiting for client to send data
+            data = await websocket.receive_text()
+            # Sends cofirmation back to the client
+            await ws_manager.private_message(player_id, f"Received data {data}")
+    except Exception:
+        ws_manager.disconnect(player_id)
+        await websocket.close(code=1011)
+
 
 @app.get("/")
 async def root():
@@ -41,6 +69,8 @@ async def send_message(payload: PlayerMessage):
         raise HTTPException(status_code=400, detail=str(e))
     
     if response:
+        await ws_manager.broadcast_message(payload.message)
+        await ws_manager.broadcast_message("Moving on to next turn...")
         game_session.new_turn()
         return {"message": "Moving on to next turn!"}
     return {"message": "Waiting for players..."}
@@ -62,3 +92,4 @@ async def remove_player(player_id):
 @app.get("/clear")
 async def clear_session():
     game_session.clear_session()
+    return {"message": "Session cleared successfully!"}
