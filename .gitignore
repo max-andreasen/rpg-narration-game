@@ -219,3 +219,4 @@ __marimo__/
 test_db.py
 __pycache__/
 *.pyc
+../db/RAG/vec_DB/
