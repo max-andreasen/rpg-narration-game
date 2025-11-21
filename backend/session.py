@@ -8,10 +8,14 @@ class GameSession:
         self.turn = 0
 
     def generate_player_id(self):
-        while True:
-            pid = str(random.randint(0, 9))
-            if pid not in self.players:
-                return pid
+        if self.players:
+            max_pid = max(int(pid) for pid in self.players)
+            return str(max_pid + 1)
+        else:
+            return str(1)
+
+    def get_players(self):
+        return self.players
     
     def add_message(self, pid, message):
         if pid not in self.players:
