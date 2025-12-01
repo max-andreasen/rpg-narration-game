@@ -32,7 +32,7 @@ export default function HomeController() {
     // * Collect relevant data, wrap into corerct form. 
     // * Handle player join game. Retrieve player ID and store in localStorage. 
     // * Change view to "game-view", passing the correct data. 
-    api.joinGame("");
+    api.joinGame(data);
     console.log(data);
     return
   }

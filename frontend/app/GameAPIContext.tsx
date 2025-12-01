@@ -26,9 +26,12 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   };
 
   const joinGame = async (data: any) => {
-    console.log("FETCHING PLAYER....");
-    console.log(data);
-    await fetch("/api/join", { method: "POST", body: JSON.stringify(data) });
+    console.log("JOINING GAME....");
+    console.log("Data", data);
+    const res = await fetch("http://localhost:8000/join", { method: "POST", body: JSON.stringify(data) });
+    const res_data = await res.json();
+    setPlayerID(res_data.player_id);
+    console.log("Response,", res_data);
   };
 
   return (

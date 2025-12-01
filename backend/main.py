@@ -11,15 +11,28 @@ the other model (state_management.py) which handles the states.
 """
 
 from fastapi import FastAPI, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 from pydantic import BaseModel
 from session import game_session
 from fastapi.responses import JSONResponse
-from fastapi import HTTPException
 from db.mongodb import *
 from websocket_manager import ws_manager
 
 app = FastAPI()
 
+
+origins = [
+    "http://localhost:3000",  # the frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class PlayerMessage(BaseModel):
     player_id: str
@@ -85,7 +98,9 @@ async def send_message(payload: PlayerMessage):
 async def join():
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
-    return {"players": list(game_session.players)}
+    return {
+        "player_id": pid,
+        "players": list(game_session.players)}
 
 
 @app.post("/rejoin")
