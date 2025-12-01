@@ -27,6 +27,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   const joinGame = async (data: any) => {
     console.log("FETCHING PLAYER....");
+    console.log(data);
     await fetch("/api/join", { method: "POST", body: JSON.stringify(data) });
   };
 
