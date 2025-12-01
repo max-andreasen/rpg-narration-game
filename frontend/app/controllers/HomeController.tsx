@@ -11,12 +11,12 @@ export default function HomeController() {
   const api = useContext(GameApiContext);
   if (!api) throw new Error("GameApiContext not provided");
 
+  // TODO; get options from backend instead of hard-code into frontend
   const RACES: Race[] = [
     {id: "human", label: "Human", prefix: "h"},
     {id: "orc", label: "Orc", prefix: "o"},
     {id: "elf", label: "Elf", prefix: "e"},
   ];
-    
   const GENDERS: Gender[] = [
     { id: "m", label: "Male" },
     { id: "f", label: "Female" },
@@ -28,13 +28,8 @@ export default function HomeController() {
   }
 
   const onJoinGame = (data: any) => {
-    // TODO: 
-    // * Collect relevant data, wrap into corerct form. 
-    // * Handle player join game. Retrieve player ID and store in localStorage. 
-    // * Change view to "game-view", passing the correct data. 
-    api.joinGame(data);
-    console.log(data);
-    return
+    api.joinGame(data); // player id is parsed into the GameAPIContext.
+    api.sendMessage("Test123");
   }
 
   return (
