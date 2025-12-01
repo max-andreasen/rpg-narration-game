@@ -20,6 +20,12 @@ from pydantic import BaseModel, Field
 from typing import List, Union
 from db.mongodb import *
 from websocket_manager import ws_manager
+from fastapi.websockets import WebSocketDisconnect
+
+from session import game_session
+
+# Importing schemas / models.
+from schemas import PlayerMessage, JoinRequest
 
 app = FastAPI()
 
@@ -36,12 +42,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-class PlayerMessage(BaseModel):
-    player_id: str
-    message: str
-
-# Websocket endpoint just handles websocket connection to clients. Seperate from game session.
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
 
@@ -61,23 +61,26 @@ class PlayerCreate(BaseModel):
     player_id = websocket.query_params.get("player_id")
     if not player_id:
         await websocket.close(code=4000)
-        return 
+        return
     if player_id not in game_session.get_players():
         await websocket.close(code=1003)
         return
+
     await ws_manager.connect(player_id, websocket)
     await ws_manager.private_message(player_id, f"Player {player_id} connected successfully!")
 
-    # The websocket session
-    try: 
+    try:
         while True:
-            # Waiting for client to send data
             data = await websocket.receive_text()
-            # Sends cofirmation back to the client
             await ws_manager.private_message(player_id, f"Received data {data}")
-    except Exception:
+    except WebSocketDisconnect:
+        # client closed the connection normally
         ws_manager.disconnect(player_id)
-        await websocket.close(code=1011)
+        print(f"Player {player_id} disconnected")
+    except Exception as e:
+        # handle other errors without closing the websocket again
+        ws_manager.disconnect(player_id)
+        print(f"Error for player {player_id}: {e}")
 
 
 # Websocket endpoint just handles websocket connection to clients. Seperate from game session.
@@ -139,10 +142,13 @@ async def send_message(payload: PlayerMessage):
 
 
 @app.post("/join")
-async def join():
+async def join(request: JoinRequest):
+    # req contains a JSON with the data
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
-    return {"players": list(game_session.players)}
+    return {
+        "player_id": pid,
+        "players": list(game_session.players)}
 
 
 @app.post("/rejoin")
