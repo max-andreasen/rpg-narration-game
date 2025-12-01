@@ -13,7 +13,8 @@ load_dotenv()
 
 MONGO_URL = os.getenv("MONGO_URL")
 
-client = MongoClient(MONGO_URL)
+client = MongoClient(MONGO_URL, tls=True, tlsAllowInvalidCertificates=True)
+
 
 mongo_db = client["rpg_dev"]
 
@@ -46,4 +47,3 @@ def get_turns(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
         .limit(limit)
     )
     return list(cursor)
-

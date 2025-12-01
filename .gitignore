@@ -219,4 +219,6 @@ __marimo__/
 test_db.py
 __pycache__/
 *.pyc
+
+test_narrator.py
 ../db/RAG/vec_DB/
