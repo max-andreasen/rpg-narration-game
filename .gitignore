@@ -221,3 +221,4 @@ __pycache__/
 *.pyc
 
 test_narrator.py
+../db/RAG/vec_DB/
