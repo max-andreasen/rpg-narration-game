@@ -20,8 +20,8 @@ class Narrator:
         self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
 
         self.system_prompt = (
-            "You are the narrator of a role-playing adventure. "
-            "You describe the world, interpret player actions, maintain consistency, "
+            "You are the narrator of a role-playing adventure."
+            "You describe the world, interpret player actions, maintain consistency,"
             "and continue the story based on game state."
         )
 

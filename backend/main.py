@@ -16,6 +16,8 @@ from session import game_session
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
+from pydantic import BaseModel, Field
+from typing import List, Union
 from db.mongodb import *
 from websocket_manager import ws_manager
 
@@ -42,6 +44,18 @@ class PlayerMessage(BaseModel):
 # Websocket endpoint just handles websocket connection to clients. Seperate from game session.
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+
+class PlayerCreate(BaseModel):
+    id: str
+    name: str
+    race: str
+    gender: str
+    items: List[str]
+    starting_item: str
+    position: Union[dict, str]
+    hp: Union[int, float]
+    character_description: str
+
 
     # Setting up the connection with an already existing player id
     player_id = websocket.query_params.get("player_id")
@@ -145,3 +159,14 @@ async def remove_player(player_id):
 async def clear_session():
     game_session.clear_session()
     return {"message": "Session cleared successfully!"}
+
+
+@app.post("/add_player")
+async def add_new_player(player_data: PlayerCreate):
+    try:
+        add_player(player_data.model_dump())
+        return JSONResponse(
+            content={"message": "Player added successfully"}, status_code=201
+        )
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
