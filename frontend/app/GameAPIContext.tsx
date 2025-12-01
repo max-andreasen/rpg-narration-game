@@ -4,16 +4,19 @@ import { createContext, ReactNode, useState } from "react";
 import { Gender, Race } from "./types";
 
 interface GameApiContextType {
+  connected: boolean;
+  playerID: string | null;
+  joinGame: (data: any) => Promise<void>;
   fetchRaces: () => Promise<Race[]>;
   fetchGenders: () => Promise<Gender[]>;
-  joinGame: (data: any) => Promise<void>;
-  playerID: string;
+  sendMessage: null; //TODO 
 }
 
 export const GameApiContext = createContext<GameApiContextType | undefined>(undefined);
 
 export function GameApiProvider({ children }: { children: ReactNode }) {
   const [playerID, setPlayerID] = useState("");
+  const [connected, setConnected] = useState(false);
 
   const fetchRaces = async () => {
     const res = await fetch("/api/races");
@@ -26,16 +29,22 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   };
 
   const joinGame = async (data: any) => {
-    console.log("JOINING GAME....");
-    console.log("Data", data);
-    const res = await fetch("http://localhost:8000/join", { method: "POST", body: JSON.stringify(data) });
+    const res = await fetch("http://localhost:8000/join", { 
+      method: "POST", 
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data)
+    });
     const res_data = await res.json();
     setPlayerID(res_data.player_id);
-    console.log("Response,", res_data);
+    console.log(`Player with ID ${res_data.player_id} joined the game.`);
   };
+ 
+  const sendMessage = null; //TODO
 
   return (
-    <GameApiContext.Provider value={{ fetchRaces, fetchGenders, joinGame, playerID}}>
+    <GameApiContext.Provider value={{ connected, playerID, joinGame, fetchRaces, fetchGenders, sendMessage}}>
       {children}
     </GameApiContext.Provider>
   );

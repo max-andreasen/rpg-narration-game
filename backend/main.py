@@ -13,14 +13,16 @@ the other model (state_management.py) which handles the states.
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
-from pydantic import BaseModel
-from session import game_session
-from fastapi.responses import JSONResponse
+
 from db.mongodb import *
 from websocket_manager import ws_manager
 
-app = FastAPI()
+from session import game_session
 
+# Importing schemas / models.
+from schemas import PlayerMessage, JoinRequest
+
+app = FastAPI()
 
 origins = [
     "http://localhost:3000",  # the frontend
@@ -33,10 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class PlayerMessage(BaseModel):
-    player_id: str
-    message: str
 
 # Websocket endpoint just handles websocket connection to clients. Seperate from game session.
 @app.websocket("/ws")
@@ -95,7 +93,8 @@ async def send_message(payload: PlayerMessage):
 
 
 @app.post("/join")
-async def join():
+async def join(req: JoinRequest):
+    # req contains a JSON with the data
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
     return {

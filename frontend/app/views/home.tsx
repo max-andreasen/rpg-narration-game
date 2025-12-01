@@ -156,7 +156,7 @@ export default function HomeView({genders, races, onJoinGame}: HomeProps) {
 
             {/* Join button */}
             <button
-              onClick={onJoinGame}
+              type="submit"
               className="mt-2 w-full rounded-md border-2 border-[#e3c779] bg-[#8c5d25] px-4 py-3 text-sm font-semibold tracking-wide text-[#f9edd3] shadow-[0_4px_0_#5a3b1a] active:translate-y-0.5 active:shadow-[0_2px_0_#5a3b1a]"
             >
               Join game
