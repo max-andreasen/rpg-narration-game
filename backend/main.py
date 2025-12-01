@@ -11,9 +11,13 @@ the other model (state_management.py) which handles the states.
 """
 
 from fastapi import FastAPI, WebSocket
+from pydantic import BaseModel
+from session import game_session
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
-
+from pydantic import BaseModel, Field
+from typing import List, Union
 from db.mongodb import *
 from websocket_manager import ws_manager
 from fastapi.websockets import WebSocketDisconnect
@@ -26,7 +30,8 @@ from schemas import PlayerMessage, JoinRequest
 app = FastAPI()
 
 origins = [
-    "http://localhost:3000",  # the frontend
+    "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -39,6 +44,20 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+
+class PlayerCreate(BaseModel):
+    id: str
+    name: str
+    race: str
+    gender: str
+    items: List[str]
+    starting_item: str
+    position: Union[dict, str]
+    hp: Union[int, float]
+    character_description: str
+
+
+    # Setting up the connection with an already existing player id
     player_id = websocket.query_params.get("player_id")
     if not player_id:
         await websocket.close(code=4000)
@@ -62,6 +81,35 @@ async def websocket_endpoint(websocket: WebSocket):
         # handle other errors without closing the websocket again
         ws_manager.disconnect(player_id)
         print(f"Error for player {player_id}: {e}")
+
+
+# Websocket endpoint just handles websocket connection to clients. Seperate from game session.
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+
+    # Setting up the connection with an already existing player id
+    player_id = websocket.query_params.get("player_id")
+    if not player_id:
+        await websocket.close(code=4000)
+        return
+    if player_id not in game_session.get_players():
+        await websocket.close(code=1003)
+        return
+    await ws_manager.connect(player_id, websocket)
+    await ws_manager.private_message(
+        player_id, f"Player {player_id} connected successfully!"
+    )
+
+    # The websocket session
+    try:
+        while True:
+            # Waiting for client to send data
+            data = await websocket.receive_text()
+            # Sends cofirmation back to the client
+            await ws_manager.private_message(player_id, f"Received data {data}")
+    except Exception:
+        ws_manager.disconnect(player_id)
+        await websocket.close(code=1011)
 
 
 @app.get("/")
@@ -117,3 +165,14 @@ async def remove_player(player_id):
 async def clear_session():
     game_session.clear_session()
     return {"message": "Session cleared successfully!"}
+
+
+@app.post("/add_player")
+async def add_new_player(player_data: PlayerCreate):
+    try:
+        add_player(player_data.model_dump())
+        return JSONResponse(
+            content={"message": "Player added successfully"}, status_code=201
+        )
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))

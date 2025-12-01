@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 load_dotenv()
 
@@ -25,6 +26,23 @@ game_context_collection = mongo_db["game_context"]
 
 def get_player(player_id: str) -> Optional[Dict[str, Any]]:
     return players_collection.find_one({"id": player_id})
+
+
+def add_player(player_data: Dict[str, Any]) -> Dict[str, Any]:
+    if "id" not in player_data:
+        raise ValueError("ID is missing")
+    if "name" not in player_data:
+        raise ValueError("Name is missing")
+
+    if get_player(player_data["id"]):
+        raise ValueError(f"A player with ID '{player_data['id']}' already exists")
+
+    player_data["created_at"] = datetime.utcnow()
+
+    result = players_collection.insert_one(player_data)
+    player_data["_id"] = result.inserted_id
+
+    return player_data
 
 
 def add_turn(

@@ -217,6 +217,7 @@ __marimo__/
 
 .env
 test_db.py
+test_narrator.py
 __pycache__/
 *.pyc
 
