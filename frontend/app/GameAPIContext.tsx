@@ -1,0 +1,38 @@
+"use client";
+
+import { createContext, ReactNode, useState } from "react";
+import { Gender, Race } from "./types";
+
+interface GameApiContextType {
+  fetchRaces: () => Promise<Race[]>;
+  fetchGenders: () => Promise<Gender[]>;
+  joinGame: (data: any) => Promise<void>;
+  playerID: string;
+}
+
+export const GameApiContext = createContext<GameApiContextType | undefined>(undefined);
+
+export function GameApiProvider({ children }: { children: ReactNode }) {
+  const [playerID, setPlayerID] = useState("");
+
+  const fetchRaces = async () => {
+    const res = await fetch("/api/races");
+    return res.json();
+  };
+
+  const fetchGenders = async () => {
+    const res = await fetch("/api/genders");
+    return res.json();
+  };
+
+  const joinGame = async (data: any) => {
+    console.log("FETCHING PLAYER....");
+    await fetch("/api/join", { method: "POST", body: JSON.stringify(data) });
+  };
+
+  return (
+    <GameApiContext.Provider value={{ fetchRaces, fetchGenders, joinGame, playerID}}>
+      {children}
+    </GameApiContext.Provider>
+  );
+}

@@ -2,26 +2,34 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Race, Gender } from "../types";
 
-const RACES = [
-  { id: "human", label: "Human", prefix: "h" },
-  { id: "orc", label: "Orc", prefix: "o" },
-  { id: "elf", label: "Elf", prefix: "e" },
-] as const;
+interface HomeProps {
+  genders: Gender[]
+  races: Race[]
+  onJoinGame: (data: any) => void;
+}
 
-const GENDERS = [
-  { id: "m", label: "Male" },
-  { id: "f", label: "Female" },
-] as const;
-
-export default function HomeView() {
+export default function HomeView({genders, races, onJoinGame}: HomeProps) {
   const [race, setRace] = useState<"human" | "orc" | "elf">("human");
   const [gender, setGender] = useState<"m" | "f">("m");
 
-  const raceMeta = RACES.find((r) => r.id === race);
+  const raceMeta = races.find((r) => r.id === race);
   const portraitSrc = raceMeta ? `/races/${raceMeta.prefix}_${gender}.png` : undefined;
   const portraitAlt =
     raceMeta && `${raceMeta.label} ${gender === "m" ? "male" : "female"}`;
+  
+  const handleSubmit = (e: any) => {
+    e.preventDefault(); // stops page reload
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      race: formData.get("race"),
+      gender: formData.get("gender"),
+      startingItem: formData.get("startingItem"),
+      description: formData.get("description"),
+    };
+    onJoinGame(data);
+  } 
 
   return (
     <div className="relative min-h-screen">
@@ -49,19 +57,19 @@ export default function HomeView() {
           {/* Portrait preview */}
           <div className="flex justify-center mb-6">
             <div className="w-24 h-24 rounded-md border-2 border-[#5a3b1a] bg-[#f3e0b5] flex items-center justify-center">
-                <Image src={portraitSrc} alt={portraitAlt} width={800} height={80} className="pixel-art"/>
+                <Image src={portraitSrc ?? ""} alt={portraitAlt ?? ""} width={800} height={80} className="pixel-art"/>
                 </div>
             </div>
 
-          {/* Character setup */}
-          <form className="space-y-6">
+          {/* FORM */}
+          <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Race */}
             <div>
               <div className="text-xs font-semibold tracking-wide text-[#5b4024] uppercase mb-2">
                 Choose your race
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {RACES.map((r) => (
+                {races.map((r) => (
                   <label
                     key={r.id}
                     className="flex flex-col items-center rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/90 px-2 py-2 text-xs sm:text-sm text-[#3a2714] cursor-pointer hover:border-[#e3c779] hover:bg-[#f7e8c6]"
@@ -86,7 +94,7 @@ export default function HomeView() {
                 Gender
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {GENDERS.map((g) => (
+                {genders.map((g) => (
                   <label
                     key={g.id}
                     className="flex flex-col items-center rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/90 px-2 py-2 text-xs sm:text-sm text-[#3a2714] cursor-pointer hover:border-[#e3c779] hover:bg-[#f7e8c6]"
@@ -148,8 +156,8 @@ export default function HomeView() {
 
             {/* Join button */}
             <button
-              type="submit"
-              className="mt-2 w-full rounded-md border-2 border-[#e3c779] bg-[#8c5d25] px-4 py-3 text-sm font-semibold tracking-wide text-[#f9edd3] shadow-[0_4px_0_#5a3b1a] active:translate-y-[2px] active:shadow-[0_2px_0_#5a3b1a]"
+              onClick={onJoinGame}
+              className="mt-2 w-full rounded-md border-2 border-[#e3c779] bg-[#8c5d25] px-4 py-3 text-sm font-semibold tracking-wide text-[#f9edd3] shadow-[0_4px_0_#5a3b1a] active:translate-y-0.5 active:shadow-[0_2px_0_#5a3b1a]"
             >
               Join game
             </button>
