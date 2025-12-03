@@ -31,8 +31,6 @@ def get_player(player_id: str) -> Optional[Dict[str, Any]]:
 def add_player(player_data: Dict[str, Any]) -> Dict[str, Any]:
     if "id" not in player_data:
         raise ValueError("ID is missing")
-    if "name" not in player_data:
-        raise ValueError("Name is missing")
 
     if get_player(player_data["id"]):
         raise ValueError(f"A player with ID '{player_data['id']}' already exists")
@@ -56,6 +54,16 @@ def add_turn(
     }
     game_context_collection.insert_one(doc)
     return doc
+
+
+def get_next_turn_index(session_id: str) -> int:
+    last_turn = game_context_collection.find_one(
+        {"session_id": session_id},
+        sort=[("turn_index", -1)],
+    )
+    if last_turn:
+        return last_turn["turn_index"] + 1
+    return 1
 
 
 def get_turns(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:

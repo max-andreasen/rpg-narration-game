@@ -122,14 +122,13 @@ async def join(request: JoinRequest):
 
     new_player_data = {
         "id": pid,
-        "name": f"Player {pid}",
         "race": request.race,
         "gender": request.gender,
         "starting_item": request.startingItem,
         "character_description": request.description,
         "items": [request.startingItem],
         "hp": 100,
-        "position": {"x": 0, "y": 0},
+        "position": "Test Location",
     }
 
     try:
