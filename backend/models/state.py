@@ -1,0 +1,316 @@
+"""
+1. read the previous game state from the database
+2. send that game state to state llm to try to generate correct JSON state 
+3. validate the state using a testing function
+4. if the state is valid, write it back to the database
+"""
+from db.mongodb import *
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+from dotenv import load_dotenv
+import os
+from typing import Tuple, Optional, Dict, Any, List
+import json
+
+
+
+
+load_dotenv(override=True)
+OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
+
+
+class GameState:
+    def __init__(self,db):
+        self.player_state = db["players"]
+        self.dialouge = db["game_context"] # conext
+        self.previous_state = None
+        self.current_state = None
+
+    def read_state(self):
+        play_list = list(self.player_state.find({}))
+        play_dict = {}
+        for player in play_list:
+            pid = player.get('id') # if id == None, skip
+            if pid is None:      
+                continue           # skip documents without id
+
+            play_dict[pid] = {
+                'name': player.get('name', ''),
+                'location': player.get('position', ''),
+                'health': player.get('hp', 100),
+                'inventory': player.get('items', []),
+            }
+
+        self.previous_state = play_dict
+        return play_dict
+
+    def generate_state(self, llm, previous_state, session_id="temp_session"):
+        # Send the previous game state to the state LLM to generate a new state
+        # read the latest player actions from the database
+
+        return llm.generate(session_id, previous_state)
+
+    def _parse_state(self, raw_state: Any) -> Optional[Dict[str, Any]]:
+        if isinstance(raw_state, dict):
+            return raw_state
+        if isinstance(raw_state, str):
+            # 1. Strip leading/trailing whitespace and newlines
+            cleaned_state = raw_state.strip()
+            
+            # 2. Remove common Markdown code fences if present
+            if cleaned_state.startswith("```json"):
+                cleaned_state = cleaned_state.removeprefix("```json").strip()
+            if cleaned_state.startswith("```"):
+                cleaned_state = cleaned_state.removeprefix("```").strip()
+                
+            if cleaned_state.endswith("```"):
+                cleaned_state = cleaned_state.removesuffix("```").strip()
+
+            try:
+                return json.loads(cleaned_state)
+            except json.JSONDecodeError as e:
+                # You might want to log the error and the content here for debugging
+                return None
+        return None
+
+
+    def validate_state(self, raw_state: Any) -> Tuple[bool, List[str]]:
+        errors: List[str] = []
+
+        state = self._parse_state(raw_state)
+        if state is None:
+            errors.append("State is not valid JSON or dict.")
+            return False, errors
+
+        if not isinstance(state, dict):
+            errors.append(f"State must be a dict, got {type(state).__name__}.")
+            return False, errors
+
+        players = state.get("players")
+        if not isinstance(players, dict):
+            errors.append('"players" must be a dict of player_id -> player_data.')
+            return False, errors
+
+        required_keys = {"name", "location", "health", "inventory"}
+
+        for pid, pdata in players.items():
+            path = f'players["{pid}"]'
+
+            if not isinstance(pdata, dict):
+                errors.append(f"{path} must be a dict, got {type(pdata).__name__}.")
+                continue
+
+            missing = required_keys - pdata.keys()
+            if missing:
+                errors.append(f"{path} missing keys: {', '.join(sorted(missing))}.")
+
+            # only type-check if key exists
+            if "name" in pdata and not isinstance(pdata["name"], str):
+                errors.append(f'{path}["name"] must be str, got {type(pdata["name"]).__name__}.')
+
+            if "location" in pdata and not isinstance(pdata["location"], str):
+                errors.append(
+                    f'{path}["location"] must be str, got {type(pdata["location"]).__name__}.'
+                )
+
+            if "health" in pdata and not isinstance(pdata["health"], int):
+                errors.append(
+                    f'{path}["health"] must be int, got {type(pdata["health"]).__name__}.'
+                )
+
+            if "inventory" in pdata and not isinstance(pdata["inventory"], list):
+                errors.append(
+                    f'{path}["inventory"] must be list, got {type(pdata["inventory"]).__name__}.'
+                )
+
+        return len(errors) == 0, errors
+    
+    def write_state_to_db(self, new_game_state: Dict[str, Any]) -> None:
+        """
+        Updates player documents in the MongoDB 'players' collection 
+        based on the new game state generated by the LLM.
+        Args:
+            new_game_state (Dict[str, Any]): The generated game state from the LLM.
+        """
+        
+        
+        players_data = new_game_state.get("players", {})
+
+        # 2. Iterate through each player
+        for player_id, player_state in players_data.items():
+            
+            # 3. Map LLM keys to DB keys
+            # LLM Keys: location, health, inventory
+            # DB Keys: position, hp, items
+            update_data = {
+                "name": player_state.get("name"),
+                "position": player_state.get("location"),
+                "hp": player_state.get("health"),
+                "items": player_state.get("inventory")
+            }
+            
+            # Remove None values just in case, though the state should be complete
+            update_data = {k: v for k, v in update_data.items() if v is not None}
+
+            # 4. Perform the update operation
+            # Use $set to update fields and the 'id' field for matching
+            result = self.player_state.update_one(
+                {"id": player_id},
+                {"$set": update_data}
+            )
+
+
+
+
+        
+class State_LLM:
+
+    def __init__(self):
+        self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+
+        self.system_prompt = """
+        You are the authoritative state manager for a cooperative role-playing game.
+
+        You always:
+        - Take the previous game state (JSON) as the single source of truth.
+        - Read the most recent narrator text and player actions.
+        - Apply only the logically necessary updates to the game state.
+        - Leave all unrelated fields unchanged.
+
+        Game state format (JSON):
+        {
+        "players": {
+            "<player_id>": {
+            "name": "<string>",
+            "location": "<string>",
+            "health": <int>,
+            "inventory": ["<string>", ...]
+            },
+            ...
+        }
+        }
+
+        Your task on each call:
+        1) Read the previous game state.
+        2) Consider the narrator description and player messages.
+        3) Update locations, health, and inventories to reflect the new situation.
+        4) Do NOT invent new players or remove players unless clearly implied.
+        5) Return ONLY the updated game state as valid JSON. No explanations, no commentary.
+        """
+
+    def build_prompt(self, session_id: str, game_state: dict, n_turns: int, validation_errors: Optional[List[str]] = None):
+        messages = []
+
+        # System instructions
+        messages.append(SystemMessage(content=self.system_prompt))
+
+        # Previous game state as JSON
+        if game_state:
+            state_json = json.dumps({"players": game_state}, indent=2)
+            messages.append(
+                SystemMessage(
+                    content=f"Previous game state (JSON):\n```json\n{state_json}\n```"
+                )
+            )
+        if validation_errors:
+                    error_msg = "\n".join(f"- {e}" for e in validation_errors)
+                    messages.append(
+                        HumanMessage(
+                            content=(
+                                f"CRITICAL ERROR: The last generated state FAILED validation. "
+                                "You MUST correct the following issues and regenerate the state:\n"
+                                f"{error_msg}\n\n"
+                                "Return ONLY the corrected, valid JSON state."
+                            )
+                        )
+                    )
+
+        # Previous turns from DB
+        turns = get_turns(session_id, limit=n_turns)
+        for turn in turns:
+            messages.append(SystemMessage(content=f"NARRATOR: {turn['narration']}"))
+            for pid, txt in turn["player_prompts"].items():
+                messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
+
+        # Final explicit instruction
+        messages.append(
+            HumanMessage(
+                content=(
+                    "Update the game state JSON based on the narrator and player actions "
+                    "above and return ONLY the new game state JSON."
+                )
+            )
+        )
+
+        return messages
+
+    def generate(self, session_id: str, game_state: dict, validation_errors: Optional[List[str]] = None) -> str:
+        prompt = self.build_prompt(session_id, game_state, n_turns=1, validation_errors=validation_errors)
+        ai_message = self.model.invoke(prompt)
+        content = ai_message.content
+
+        if isinstance(content, list):
+            content = " ".join(
+                item if isinstance(item, str) else str(item) for item in content
+            )
+
+        return content
+    
+
+
+
+
+def run_state_management():
+    MAX_RETRIES = 2
+    # It's better to manage the Mongo URL outside if this is run in a production environment
+    MONGO_URL = os.getenv("MONGO_URL")
+    # This hardcoded URL should be removed in production
+    if not MONGO_URL:
+        return print("MONGO_URL not set in environment variables.")
+    
+    client = MongoClient(MONGO_URL, tls=True, tlsAllowInvalidCertificates=True)
+    mongo_db = client["rpg_dev"]
+    
+    state_manager = GameState(db=mongo_db)
+    state_llm = State_LLM()
+    SESSION_TEMP_ID = "session_1"
+    previous_state = state_manager.read_state()
+
+    new_state_raw = None
+    is_valid = False
+    errs = []
+    
+    for attempt in range(MAX_RETRIES):
+        
+        # If not the first attempt, pass the errors back to the LLM
+        errors_to_report = errs if attempt > 0 else None
+        
+        # Generate new state (now includes error reporting)
+        new_state_raw = state_llm.generate(
+            session_id=SESSION_TEMP_ID, 
+            game_state=previous_state, 
+            validation_errors=errors_to_report
+        )
+        
+        # Validate the generated state
+        is_valid, errs = state_manager.validate_state(new_state_raw)
+        if is_valid:
+            break
+        else:
+            for e in errs:
+                print(f" - {e}")
+            if attempt < MAX_RETRIES - 1:
+                print("Reporting errors to LLM and retrying...")
+    
+    # Write State or Log Failure
+    if is_valid:
+        # Get the parsed dictionary
+        new_state_dict = state_manager._parse_state(new_state_raw) 
+        
+        # Write back to the database
+        state_manager.write_state_to_db(new_state_dict)
+        print("\nSUCCESS: Game state updated in the database.")
+    else:
+        print(f"\nFATAL: Failed to generate a valid state after {MAX_RETRIES} attempts.")
+    
+
