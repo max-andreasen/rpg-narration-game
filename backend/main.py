@@ -31,6 +31,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:3001",  # please leave here, I need it for testing frontend
     "http://localhost:5173",
 ]
 
@@ -128,9 +129,26 @@ async def join(request: JoinRequest):
     # req contains a JSON with the data
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
-    return {
-        "player_id": pid,
-        "players": list(game_session.players)}
+
+    new_player_data = {
+        "id": pid,
+        "name": f"Player {pid}",
+        "race": request.race,
+        "gender": request.gender,
+        "starting_item": request.startingItem,
+        "character_description": request.description,
+        "items": [request.startingItem],
+        "hp": 100,
+        "position": {"x": 0, "y": 0},
+    }
+
+    try:
+        add_player(new_player_data)
+        print(f"Player {pid} saved in MongoDB database.")
+    except Exception as e:
+        print(f"Database save error: {e}")
+
+    return {"player_id": pid, "players": list(game_session.players)}
 
 
 @app.post("/rejoin")
