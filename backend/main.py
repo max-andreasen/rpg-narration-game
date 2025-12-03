@@ -17,20 +17,21 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Union
 from db.mongodb import *
 from websocket_manager import ws_manager
 from fastapi.websockets import WebSocketDisconnect
+import json
 
 from session import game_session
 
 # Importing schemas / models.
-from schemas import PlayerMessage, JoinRequest
+from schemas import PlayerMessage, JoinRequest, PlayerCreate
 
 app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:3001",  # please leave here, I need it for testing frontend
     "http://localhost:5173",
 ]
 
@@ -42,52 +43,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-
-class PlayerCreate(BaseModel):
-    id: str
-    name: str
-    race: str
-    gender: str
-    items: List[str]
-    starting_item: str
-    position: Union[dict, str]
-    hp: Union[int, float]
-    character_description: str
-
-
-    # Setting up the connection with an already existing player id
-    player_id = websocket.query_params.get("player_id")
-    if not player_id:
-        await websocket.close(code=4000)
-        return
-    if player_id not in game_session.get_players():
-        await websocket.close(code=1003)
-        return
-
-    await ws_manager.connect(player_id, websocket)
-    await ws_manager.private_message(player_id, f"Player {player_id} connected successfully!")
-
+async def player_action_message(payload: PlayerMessage):
     try:
-        while True:
-            data = await websocket.receive_text()
-            await ws_manager.private_message(player_id, f"Received data {data}")
-    except WebSocketDisconnect:
-        # client closed the connection normally
-        ws_manager.disconnect(player_id)
-        print(f"Player {player_id} disconnected")
+        last_message = game_session.add_message(payload.player_id, payload.message)
+        # save message to db here
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # handle other errors without closing the websocket again
-        ws_manager.disconnect(player_id)
-        print(f"Error for player {player_id}: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if last_message:
+        await ws_manager.broadcast_message(payload.message)
+        await ws_manager.broadcast_message("Moving on to next turn...")
+        game_session.new_turn()
+        return {"message": "Moving on to next turn!"}
+    return {"message": "Waiting for players..."}
 
 
 # Websocket endpoint just handles websocket connection to clients. Seperate from game session.
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
 
-    # Setting up the connection with an already existing player id
+    # Websocket set-up
     player_id = websocket.query_params.get("player_id")
     if not player_id:
         await websocket.close(code=4000)
@@ -97,18 +75,43 @@ async def websocket_endpoint(websocket: WebSocket):
         return
     await ws_manager.connect(player_id, websocket)
     await ws_manager.private_message(
-        player_id, f"Player {player_id} connected successfully!"
+        player_id,
+        json.dumps({
+            "type": "world",
+            "message": f"Player {player_id} connected successfully!"
+        })
     )
-
     # The websocket session
     try:
         while True:
             # Waiting for client to send data
-            data = await websocket.receive_text()
-            # Sends cofirmation back to the client
-            await ws_manager.private_message(player_id, f"Received data {data}")
-    except Exception:
-        ws_manager.disconnect(player_id)
+            raw_data = await websocket.receive_text()
+            data = json.loads(raw_data)
+            
+            data_type = data.get("type")
+            data_message = data.get("message")
+
+            print(data_type)
+
+            # Sends data to LLMs
+            if data_type == "world":
+                message = "I am an LLM supposed to answer your question.. Please connect me!"
+            elif data_type == "action":
+                message = "I am the narrator. I am here to determine what happens next. Connect me please!" 
+            else:
+                message = "Something went wrong..."
+            
+            # Sends response back to the client
+            await ws_manager.private_message(
+                player_id,
+                json.dumps({
+                    "type": data_type,
+                    "message": message
+                })
+            )
+    except Exception as e:
+        print("Error occured: ", e)
+        await ws_manager.disconnect(player_id)
         await websocket.close(code=1011)
 
 
@@ -121,34 +124,30 @@ async def root():
 async def get_sesssion():
     return game_session
 
-
-@app.post("/message")
-async def send_message(payload: PlayerMessage):
-    try:
-        response = game_session.add_message(payload.player_id, payload.message)
-        # save message to db here
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    if response:
-        await ws_manager.broadcast_message(payload.message)
-        await ws_manager.broadcast_message("Moving on to next turn...")
-        game_session.new_turn()
-        return {"message": "Moving on to next turn!"}
-    return {"message": "Waiting for players..."}
-
-
 @app.post("/join")
 async def join(request: JoinRequest):
     # req contains a JSON with the data
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
-    return {
-        "player_id": pid,
-        "players": list(game_session.players)}
+
+    new_player_data = {
+        "id": pid,
+        "race": request.race,
+        "gender": request.gender,
+        "starting_item": request.startingItem,
+        "character_description": request.description,
+        "items": [request.startingItem],
+        "hp": 100,
+        "position": "Test Location",
+    }
+
+    try:
+        add_player(new_player_data)
+        print(f"Player {pid} saved in MongoDB database.")
+    except Exception as e:
+        print(f"Database save error: {e}")
+
+    return {"player_id": pid, "players": list(game_session.players)}
 
 
 @app.post("/rejoin")

@@ -1,31 +1,100 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useState, useContext } from "react";
+import { GameApiContext } from "../GameAPIContext";
 
 export default function GameView() {
-    const [messages, setMessages] = useState<string[]>([]);
-    const playerId = 1; // fetching from localStorage later on. Or useContext maybe.
+    const api = useContext(GameApiContext);
+    if (!api) throw new Error("GameApiContext not provided");
 
-    useEffect(() => {
-        const ws = new WebSocket(`ws://localhost:8000/ws?player_id=${playerId}`);
+    const { worldHistory, actionHistory, sendMessage } = api;
 
-        ws.onopen = () => console.log("Connected!");
-        ws.onmessage = (event) => {
-            console.log("Received:", event.data);
-            setMessages(prev => [...prev, event.data]); 
-        };
-        ws.onerror = (err) => console.error("WebSocket error:", err);
-        ws.onclose = () => console.log("WebSocket closed");
+  const [worldChat, setWorldChat] = useState("");
+  const [actionChat, setActionChat] = useState("");
 
-        return () => ws.close();
-    }, []);
+  const submitWorld = (e: any) => {
+    e.preventDefault();
+    if (!worldChat.trim()) return; // nothing inputted
+    sendMessage("world", worldChat);
+    setWorldChat("");
+  };
 
-    return (
-        <div>
-            <h1>This is the game view</h1>
-            <ul>
-                {messages.map((msg, i) => <li key={i}>{msg}</li>)}
-            </ul>
+  const submitAction = (e: any) => {
+    e.preventDefault();
+    if (!actionChat.trim()) return;
+    sendMessage("action", actionChat);
+    setActionChat("");
+  };
+
+  return (
+    <div className="relative min-h-screen flex">
+      {/* MAP BACKGROUND */}
+      <Image
+        src="/map_backround.jpg"
+        alt="Map background"
+        fill
+        className="object-cover -z-10"
+      />
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 relative z-10 p-4 flex flex-col justify-end items-center">
+        {/* ACTION WINDOW */}
+        <div className="max-w-3xl w-full mb-6">
+          <h2 className="text-xl font-semibold text-[#f8ecd0] mb-1">Action Window</h2>
+          <p className="text-xs text-[#c8b69a] italic mb-2">Only actions, no questions</p>
+
+          <div className="h-56 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2">
+            {actionHistory.map((msg, idx) => (
+              <div key={idx} className="whitespace-pre-wrap">{msg}</div>
+            ))}
+          </div>
+
+          <form onSubmit={submitAction} className="flex gap-2">
+            <input
+              className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]"
+              placeholder="State your action..."
+              value={actionChat}
+              onChange={(e) => setActionChat(e.target.value)}
+            />
+            <button
+              type="submit"
+              className="rounded-md border-2 border-[#e3c779] bg-[#8c5d25] px-4 py-2 text-[#f9edd3] font-semibold shadow-[0_3px_0_#5a3b1a] active:translate-y-0.5"
+            >
+              Act
+            </button>
+          </form>
         </div>
-    );
+      </div>
+
+      {/* RIGHT SIDEBAR */}
+      <div className="w-80 bg-[#1b1512]/70 border-l-4 border-[#5a3b1a] p-4 flex flex-col relative z-10">
+        <div className="text-center mb-3">
+          <h2 className="text-xl font-semibold text-[#f8ecd0]">Question chat</h2>
+          <p className="text-xs text-[#c8b69a] italic">Ask questions about the world</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2">
+          {worldHistory.map((msg, idx) => (
+            <div key={idx} className="whitespace-pre-wrap">{msg}</div>
+          ))}
+        </div>
+
+        <form onSubmit={submitWorld} className="flex gap-2">
+          <input
+            className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-2 py-1 text-sm text-[#3a2714]"
+            placeholder="Ask the narrator..."
+            value={worldChat}
+            onChange={(e) => setWorldChat(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="rounded-md border-2 border-[#e3c779] bg-[#8c5d25] px-3 py-1 text-[#f9edd3] font-semibold shadow-[0_2px_0_#5a3b1a] active:translate-y-0.5"
+          >
+            Send
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 }

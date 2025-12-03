@@ -17,7 +17,7 @@ load_dotenv(override=True)
 class Narrator:
 
     def __init__(self):
-        self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+        self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0.99)
 
         self.system_prompt = (
             "You are the narrator of a role-playing adventure."
@@ -25,9 +25,7 @@ class Narrator:
             "and continue the story based on game state."
         )
 
-    def build_prompt(
-        self, session_id: str, game_state: dict, player_messages: dict, n_turns: int
-    ):
+    def build_prompt(self, session_id: str, game_state: dict, n_turns: int):
         messages = []
 
         # System prompt
@@ -45,19 +43,33 @@ class Narrator:
                 messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
 
         # Latest user input
-        for pid, txt in player_messages.items():
+        for pid, txt in game_state["player_messages"].items():
             messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
 
         return messages
 
-    def generate(self, session_id: str, game_state: dict, player_messages: dict) -> str:
-        prompt = self.build_prompt(session_id, game_state, player_messages, n_turns=20)
-        ai_message = self.model.invoke(prompt)
-        content = ai_message.content
+    def generate(self, session_id: str, game_state: dict) -> str:
+        prompt = self.build_prompt(session_id, game_state, n_turns=20)
+        # ai_message = self.model.invoke(prompt)
+        content = "I am saving your API key"
 
         if isinstance(content, list):
             content = " ".join(
                 item if isinstance(item, str) else str(item) for item in content
             )
+
+        try:
+            next_turn_idx = get_next_turn_index(session_id)
+
+            add_turn(
+                session_id=session_id,
+                turn_index=next_turn_idx,
+                narration=content,
+                player_prompts={"P1": "test", "P2": "test"},  # Placeholder
+            )
+            print(f"Turn {next_turn_idx} saved in DB.")
+
+        except Exception as e:
+            print(f"Error saving to DB: {e}")
 
         return content

@@ -5,20 +5,22 @@ import { useState } from "react";
 import { Race, Gender } from "../types";
 
 interface HomeProps {
-  genders: Gender[]
-  races: Race[]
+  genders: Gender[];
+  races: Race[];
   onJoinGame: (data: any) => void;
 }
 
-export default function HomeView({genders, races, onJoinGame}: HomeProps) {
+export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
   const [race, setRace] = useState<"human" | "orc" | "elf">("human");
   const [gender, setGender] = useState<"m" | "f">("m");
 
   const raceMeta = races.find((r) => r.id === race);
-  const portraitSrc = raceMeta ? `/races/${raceMeta.prefix}_${gender}.png` : undefined;
+  const portraitSrc = raceMeta
+    ? `/races/${raceMeta.prefix}_${gender}.png`
+    : undefined;
   const portraitAlt =
     raceMeta && `${raceMeta.label} ${gender === "m" ? "male" : "female"}`;
-  
+
   const handleSubmit = (e: any) => {
     e.preventDefault(); // stops page reload
     const formData = new FormData(e.currentTarget);
@@ -29,7 +31,7 @@ export default function HomeView({genders, races, onJoinGame}: HomeProps) {
       description: formData.get("description"),
     };
     onJoinGame(data);
-  } 
+  };
 
   return (
     <div className="relative min-h-screen">
@@ -57,9 +59,15 @@ export default function HomeView({genders, races, onJoinGame}: HomeProps) {
           {/* Portrait preview */}
           <div className="flex justify-center mb-6">
             <div className="w-24 h-24 rounded-md border-2 border-[#5a3b1a] bg-[#f3e0b5] flex items-center justify-center">
-                <Image src={portraitSrc ?? ""} alt={portraitAlt ?? ""} width={800} height={80} className="pixel-art"/>
-                </div>
+              <Image
+                src={portraitSrc ?? ""}
+                alt={portraitAlt ?? ""}
+                width={800}
+                height={80}
+                className="pixel-art"
+              />
             </div>
+          </div>
 
           {/* FORM */}
           <form className="space-y-6" onSubmit={handleSubmit}>
