@@ -31,6 +31,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:3001",
     "http://localhost:5173",
 ]
 
@@ -42,8 +43,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
 
 class PlayerCreate(BaseModel):
     id: str
@@ -55,32 +54,6 @@ class PlayerCreate(BaseModel):
     position: Union[dict, str]
     hp: Union[int, float]
     character_description: str
-
-
-    # Setting up the connection with an already existing player id
-    player_id = websocket.query_params.get("player_id")
-    if not player_id:
-        await websocket.close(code=4000)
-        return
-    if player_id not in game_session.get_players():
-        await websocket.close(code=1003)
-        return
-
-    await ws_manager.connect(player_id, websocket)
-    await ws_manager.private_message(player_id, f"Player {player_id} connected successfully!")
-
-    try:
-        while True:
-            data = await websocket.receive_text()
-            await ws_manager.private_message(player_id, f"Received data {data}")
-    except WebSocketDisconnect:
-        # client closed the connection normally
-        ws_manager.disconnect(player_id)
-        print(f"Player {player_id} disconnected")
-    except Exception as e:
-        # handle other errors without closing the websocket again
-        ws_manager.disconnect(player_id)
-        print(f"Error for player {player_id}: {e}")
 
 
 # Websocket endpoint just handles websocket connection to clients. Seperate from game session.
@@ -146,9 +119,26 @@ async def join(request: JoinRequest):
     # req contains a JSON with the data
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
-    return {
-        "player_id": pid,
-        "players": list(game_session.players)}
+
+    new_player_data = {
+        "id": pid,
+        "name": f"Player {pid}",
+        "race": request.race,
+        "gender": request.gender,
+        "starting_item": request.startingItem,
+        "character_description": request.description,
+        "items": [request.startingItem],
+        "hp": 100,
+        "position": {"x": 0, "y": 0},
+    }
+
+    try:
+        add_player(new_player_data)
+        print(f"Player {pid} saved in MongoDB database.")
+    except Exception as e:
+        print(f"Database save error: {e}")
+
+    return {"player_id": pid, "players": list(game_session.players)}
 
 
 @app.post("/rejoin")

@@ -1,9 +1,12 @@
 from pydantic import BaseModel
 
+
 class JoinRequest(BaseModel):
     race: str
     gender: str
     startingItem: str
+    description: str
+
 
 class PlayerMessage(BaseModel):
     player_id: str
