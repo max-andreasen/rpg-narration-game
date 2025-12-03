@@ -5,11 +5,14 @@ import HomeView from "@/app/views/home";
 import { Race, Gender } from "../types";
 import { GameApiContext } from "@/app/GameAPIContext";
 import { useContext } from "react";
+import { useRouter } from "next/navigation";
 
 export default function HomeController() {
 
   const api = useContext(GameApiContext);
   if (!api) throw new Error("GameApiContext not provided");
+
+  const router = useRouter();
 
   // TODO; get options from backend instead of hard-code into frontend
   const RACES: Race[] = [
@@ -29,7 +32,7 @@ export default function HomeController() {
 
   const onJoinGame = (data: any) => {
     api.joinGame(data); // player id is parsed into the GameAPIContext.
-    api.sendMessage("Test123");
+    router.push("/game"); // changes view to the game view
   }
 
   return (
