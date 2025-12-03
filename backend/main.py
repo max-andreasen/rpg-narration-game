@@ -23,6 +23,7 @@ from fastapi.websockets import WebSocketDisconnect
 import json
 
 from session import game_session
+from models.narrator import Narrator
 
 # Importing schemas / models.
 from schemas import PlayerMessage, JoinRequest, PlayerCreate
@@ -90,23 +91,25 @@ async def websocket_endpoint(websocket: WebSocket):
             
             data_type = data.get("type")
             data_message = data.get("message")
-
+            data_message = {"player1": data_message}
             print(data_type)
 
             # Sends data to LLMs
             if data_type == "world":
-                message = "I am an LLM supposed to answer your question.. Please connect me!"
+                narrator_message = "I am an LLM supposed to answer your question.. Please connect me!"
             elif data_type == "action":
-                message = "I am the narrator. I am here to determine what happens next. Connect me please!" 
+                narrator = Narrator()
+                game_state = {"player_messages": data_message}
+                narrator_message = narrator.generate("session_1", game_state)
             else:
-                message = "Something went wrong..."
+                narrator_message = "Something went wrong..."
             
             # Sends response back to the client
             await ws_manager.private_message(
                 player_id,
                 json.dumps({
                     "type": data_type,
-                    "message": message
+                    "message": narrator_message
                 })
             )
     except Exception as e:
@@ -149,11 +152,9 @@ async def join(request: JoinRequest):
 
     return {"player_id": pid, "players": list(game_session.players)}
 
-
 @app.post("/rejoin")
 async def join(player_id):
     return "rejoin"
-
 
 @app.post("/remove")
 async def remove_player(player_id):
