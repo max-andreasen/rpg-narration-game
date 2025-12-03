@@ -29,6 +29,8 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [actionHistory, setActionHistory] = useState<string[]>([]);
   const [systemHistory, setSystemHistory] = useState<string[]>([]); // will be used later to implement system messages, such as "player joined game".
 
+  const [actionAvailable, setActionAvailable] = useState(false); // can only make one action each turn
+
   // Fetches data from the backend about the game. 
   const fetchRaces = async () => {
     const res = await fetch("/api/races");
@@ -91,10 +93,12 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     if (ws && ws.readyState === WebSocket.OPEN) {
       const payload = JSON.stringify({ type, message: msg });
       console.log("Sending WS message...", payload);
-      ws.send(msg);
-      if (type="world") { 
+      ws.send(payload);
+      if (type == "world") { 
+        console.log("Adding world message...")
         addWorldMessage(msg);
-      } else if (type="action") {
+      } else if (type == "action") {
+        console.log("Adding action message...")
         addActionMessage(msg);
       } else {
         console.warn("Type is not valid");

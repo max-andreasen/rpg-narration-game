@@ -42,59 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-# Websocket endpoint just handles websocket connection to clients. Seperate from game session.
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-
-    # Setting up the connection with an already existing player id
-    player_id = websocket.query_params.get("player_id")
-    if not player_id:
-        await websocket.close(code=4000)
-        return
-    if player_id not in game_session.get_players():
-        await websocket.close(code=1003)
-        return
-    await ws_manager.connect(player_id, websocket)
-    await ws_manager.private_message(
-        player_id,
-        json.dumps({
-            "type": "world",
-            "message": f"Player {player_id} connected successfully!"
-        })
-    )
-
-    # The websocket session
-    try:
-        while True:
-            # Waiting for client to send data
-            data = await websocket.receive_text()
-            # Sends cofirmation back to the client
-            await ws_manager.private_message(
-                player_id,
-                json.dumps({
-                    "type": "world",
-                    "message": f"Hello there! I am now responding to you..."
-                })
-            )
-    except Exception:
-        ws_manager.disconnect(player_id)
-        await websocket.close(code=1011)
-
-
-@app.get("/")
-async def root():
-    return {"message": "Server running"}
-
-
-@app.get("/session")
-async def get_sesssion():
-    return game_session
-
-
-@app.post("/message")
-async def send_message(payload: PlayerMessage):
+async def player_action_message(payload: PlayerMessage):
     try:
         last_message = game_session.add_message(payload.player_id, payload.message)
         # save message to db here
@@ -111,6 +59,69 @@ async def send_message(payload: PlayerMessage):
         return {"message": "Moving on to next turn!"}
     return {"message": "Waiting for players..."}
 
+
+# Websocket endpoint just handles websocket connection to clients. Seperate from game session.
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+
+    # Websocket set-up
+    player_id = websocket.query_params.get("player_id")
+    if not player_id:
+        await websocket.close(code=4000)
+        return
+    if player_id not in game_session.get_players():
+        await websocket.close(code=1003)
+        return
+    await ws_manager.connect(player_id, websocket)
+    await ws_manager.private_message(
+        player_id,
+        json.dumps({
+            "type": "world",
+            "message": f"Player {player_id} connected successfully!"
+        })
+    )
+    # The websocket session
+    try:
+        while True:
+            # Waiting for client to send data
+            raw_data = await websocket.receive_text()
+            data = json.loads(raw_data)
+            
+            data_type = data.get("type")
+            data_message = data.get("message")
+
+            print(data_type)
+
+            # Sends data to LLMs
+            if data_type == "world":
+                message = "I am an LLM supposed to answer your question.. Please connect me!"
+            elif data_type == "action":
+                message = "I am the narrator. I am here to determine what happens next. Connect me please!" 
+            else:
+                message = "Something went wrong..."
+            
+            # Sends response back to the client
+            await ws_manager.private_message(
+                player_id,
+                json.dumps({
+                    "type": data_type,
+                    "message": message
+                })
+            )
+    except Exception as e:
+        print("Error occured: ", e)
+        await ws_manager.disconnect(player_id)
+        await websocket.close(code=1011)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Server running"}
+
+
+@app.get("/session")
+async def get_sesssion():
+    return game_session
 
 @app.post("/join")
 async def join(request: JoinRequest):

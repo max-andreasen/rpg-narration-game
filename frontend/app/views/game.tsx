@@ -10,14 +10,14 @@ export default function GameView() {
 
     const { worldHistory, actionHistory, sendMessage } = api;
 
-  const [worldChat, setQuestionChat] = useState("");
+  const [worldChat, setWorldChat] = useState("");
   const [actionChat, setActionChat] = useState("");
 
   const submitWorld = (e: any) => {
     e.preventDefault();
     if (!worldChat.trim()) return; // nothing inputted
     sendMessage("world", worldChat);
-    setQuestionChat("");
+    setWorldChat("");
   };
 
   const submitAction = (e: any) => {
@@ -85,7 +85,7 @@ export default function GameView() {
             className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-2 py-1 text-sm text-[#3a2714]"
             placeholder="Ask the narrator..."
             value={worldChat}
-            onChange={(e) => setQuestionChat(e.target.value)}
+            onChange={(e) => setWorldChat(e.target.value)}
           />
           <button
             type="submit"
