@@ -116,6 +116,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif data_type == "action":
                 all_messages = game_session.add_message(data_sender_id, data_message)
                 if all_messages: 
+                    # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
                     print("ALL MESSAGES SENT!")
                     print(world_model.generate("session_1", "Do ghouls whipser apologies?"))
                     narrator_message = narrator.generate("session_1", {"player_messages": all_messages})
@@ -186,9 +187,10 @@ async def remove_player(player_id):
     game_session.delete_player(player_id)
 
 
-@app.get("/clear")
-async def clear_session():
+@app.get("/reset")
+async def reset_session():
     game_session.clear_session()
+    clear_db()
     return {"message": "Session cleared successfully!"}
 
 
