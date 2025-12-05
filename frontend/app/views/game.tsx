@@ -40,7 +40,6 @@ export default function GameView({
 
   const onResetGame = () => {
     resetGame();
-    router.push("/"); // route back to homepage
   };
 
   return (
