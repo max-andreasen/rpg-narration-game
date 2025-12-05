@@ -6,7 +6,7 @@ Uses user input and game state as input to generate an output.
 
 # we are trying to build the input for the model: it should contain the input from the users, system prompt, the context (narrator's message), and state.
 
-from backend.db.mongodb import *
+from db.mongodb import *
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
@@ -50,8 +50,8 @@ class Narrator:
 
     def generate(self, session_id: str, game_state: dict) -> str:
         prompt = self.build_prompt(session_id, game_state, n_turns=20)
-        # ai_message = self.model.invoke(prompt)
-        content = "I am saving your API key"
+        ai_message = self.model.invoke(prompt)
+        content = ai_message.content
 
         if isinstance(content, list):
             content = " ".join(

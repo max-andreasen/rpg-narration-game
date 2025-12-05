@@ -23,6 +23,8 @@ from fastapi.websockets import WebSocketDisconnect
 import json
 
 from session import game_session
+from models.narrator import Narrator
+from models.world_model import WorldModel
 
 # Importing schemas / models.
 from schemas import PlayerMessage, JoinRequest, PlayerCreate
@@ -77,7 +79,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.private_message(
         player_id,
         json.dumps({
-            "type": "world",
+            "type": "world", # should be system when implemented in frontend
             "message": f"Player {player_id} connected successfully!"
         })
     )
@@ -88,27 +90,52 @@ async def websocket_endpoint(websocket: WebSocket):
             raw_data = await websocket.receive_text()
             data = json.loads(raw_data)
             
+            # TODO: Refactor this into its own module that takes data as input and generates response object as output.
+
             data_type = data.get("type")
             data_message = data.get("message")
+            data_sender_id = data.get("pid") # the player ID sending the message
 
-            print(data_type)
+            world_model = WorldModel()
+            narrator = Narrator()
 
             # Sends data to LLMs
             if data_type == "world":
-                message = "I am an LLM supposed to answer your question.. Please connect me!"
+                # TODO: Maybe add this conversation to some history. It is already kept in frontend though. 
+                # TODO: Fetch the player state / game state, so the model has context. 
+                # TODO: Invoke the narrator, with question mode. 
+                # TODO: Send a private message back with type "world"
+                narrator_message = "I am an LLM supposed to answer your question.. Please connect me!"
+                await ws_manager.private_message(
+                    player_id,
+                    json.dumps({
+                        "type": "world",
+                        "message": narrator_message
+                    })
+                )
             elif data_type == "action":
-                message = "I am the narrator. I am here to determine what happens next. Connect me please!" 
-            else:
-                message = "Something went wrong..."
-            
-            # Sends response back to the client
-            await ws_manager.private_message(
-                player_id,
-                json.dumps({
-                    "type": data_type,
-                    "message": message
-                })
-            )
+                all_messages = game_session.add_message(data_sender_id, data_message)
+                if all_messages: 
+                    print("ALL MESSAGES SENT!")
+                    print(world_model.generate("session_1", "Do ghouls whipser apologies?"))
+                    narrator_message = narrator.generate("session_1", {"player_messages": all_messages})
+                    game_session.new_turn()
+                    await ws_manager.broadcast_message(
+                        json.dumps({
+                            "type": "action",
+                            "message": narrator_message
+                        })
+                    )
+            else:                     
+                # Sends response back to the client
+                await ws_manager.private_message(
+                    player_id,
+                    json.dumps({
+                        "type": "system",
+                        "message": "Something went wrong..."
+                    })
+                )
+
     except Exception as e:
         print("Error occured: ", e)
         await ws_manager.disconnect(player_id)
@@ -126,6 +153,9 @@ async def get_sesssion():
 
 @app.post("/join")
 async def join(request: JoinRequest):
+
+    # TODO: Check the sent player id and compare with the DB. 
+    # TODO: Need to rework the player system a bit. 
     # req contains a JSON with the data
     pid = game_session.generate_player_id()
     game_session.players.add(pid)
@@ -149,11 +179,9 @@ async def join(request: JoinRequest):
 
     return {"player_id": pid, "players": list(game_session.players)}
 
-
-@app.post("/rejoin")
-async def join(player_id):
+@app.post("/reconnect")
+async def reconnect_player(player_id):
     return "rejoin"
-
 
 @app.post("/remove")
 async def remove_player(player_id):
