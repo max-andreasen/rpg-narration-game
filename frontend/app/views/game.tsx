@@ -2,27 +2,31 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation"; // import router
 
 interface Props {
   worldHistory: string[];
   actionHistory: string[];
   submitWorld: (msg: string) => void;
   submitAction: (msg: string) => void;
+  resetGame: () => void;
 }
 
 export default function GameView({
     worldHistory,
     actionHistory,
     submitWorld,
-    submitAction
+    submitAction,
+    resetGame, 
 }: any) {
 
+  const router = useRouter(); // initialize router
   const [worldChat, setWorldChat] = useState("");
   const [actionChat, setActionChat] = useState("");
 
   const onSubmitWorld = (e: any) => {
     e.preventDefault();
-    if (!worldChat.trim()) return; // nothing inputted
+    if (!worldChat.trim()) return;
     submitWorld(worldChat);
     setWorldChat("");
   };
@@ -34,8 +38,21 @@ export default function GameView({
     setActionChat("");
   };
 
+  const onResetGame = () => {
+    resetGame();
+    router.push("/"); // route back to homepage
+  };
+
   return (
     <div className="relative min-h-screen flex">
+      {/* RESET BUTTON */}
+      <button
+        onClick={onResetGame}
+        className="absolute top-4 left-4 z-20 rounded-md border-2 border-[#e3c779] bg-[#950606] px-4 py-2 text-[#f9edd3] font-semibold shadow-[0_3px_0_#5a3b1a] active:translate-y-0.5"
+      >
+        Reset Game
+      </button>
+
       {/* MAP BACKGROUND */}
       <Image
         src="/map_backround.jpg"

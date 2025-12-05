@@ -26,6 +26,13 @@ export default function GameController() {
         sendMessage("action", actionChat);
     };
 
+    const resetGame = async () => {
+        const confirmed = window.confirm("Are you sure you want to reset the game?");
+        if (!confirmed) return;
+        api.reset();
+        router.push("/");
+    }
+
     // Loads on mount.
     useEffect(() => {
         const savedPlayerID = localStorage.getItem("playerID");
@@ -56,6 +63,7 @@ export default function GameController() {
             actionHistory={actionHistory}
             submitWorld={submitWorld}
             submitAction={submitAction}
+            resetGame={resetGame}
         />
     );
 }

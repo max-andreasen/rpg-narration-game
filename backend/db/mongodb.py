@@ -73,3 +73,9 @@ def get_turns(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
         .limit(limit)
     )
     return list(cursor)
+
+# Clears EVERYTHING in the database
+def clear_db():
+    players_collection.drop()
+    npcs_collection.drop()
+    game_context_collection.drop()

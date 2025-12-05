@@ -9,6 +9,7 @@ interface GameApiContextType {
 
   playerID: string | null;
   joinGame: (data: any) => Promise<void>;
+  reset: () => void;
   fetchRaces: () => Promise<Race[]>;
   fetchGenders: () => Promise<Gender[]>;
 
@@ -45,7 +46,6 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     return res.json();
   };
 
-
   // JOINING THE GAME.
   const joinGame = async (data: any) => {
     console.log("Joining the game...");
@@ -60,6 +60,24 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setPlayerID(res_data.player_id);
     localStorage.setItem("playerID", res_data.player_id);
     console.log(`Player with ID ${res_data.player_id} joined the game.`);
+  };
+
+  const reset = async () => {
+    // Reset the local states 
+    setPlayerID(null);
+    setWorldHistory([]);
+    setActionHistory([]);
+    setSystemHistory([]);
+    setWs(null);
+    
+    const res = await fetch("http://localhost:8000/reset");
+    localStorage.clear();
+
+    if (res.status == 200) {
+      console.log("Game session reset successfully.");
+      return
+    }
+    console.error("Something went wrong when resetting the game session");
   };
 
   // RECONNECTION LOGIC
@@ -155,6 +173,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       reconnect,
       playerID, 
       joinGame, 
+      reset,
       fetchRaces, 
       fetchGenders, 
       sendMessage,
