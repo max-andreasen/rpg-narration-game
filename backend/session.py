@@ -29,6 +29,10 @@ class GameSession:
             return self.messages
         else:
             return None
+        
+    def get_state_for_player(pid):
+        # returns the info needed for the frontend 
+        return
 
     def new_turn(self):
         self.turn += 1

@@ -1,29 +1,36 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useContext } from "react";
-import { GameApiContext } from "../GameAPIContext";
+import { useState } from "react";
 
-export default function GameView() {
-    const api = useContext(GameApiContext);
-    if (!api) throw new Error("GameApiContext not provided");
+interface Props {
+  worldHistory: string[];
+  actionHistory: string[];
+  submitWorld: (msg: string) => void;
+  submitAction: (msg: string) => void;
+}
 
-    const { worldHistory, actionHistory, sendMessage } = api;
+export default function GameView({
+    worldHistory,
+    actionHistory,
+    submitWorld,
+    submitAction
+}: any) {
 
   const [worldChat, setWorldChat] = useState("");
   const [actionChat, setActionChat] = useState("");
 
-  const submitWorld = (e: any) => {
+  const onSubmitWorld = (e: any) => {
     e.preventDefault();
     if (!worldChat.trim()) return; // nothing inputted
-    sendMessage("world", worldChat);
+    submitWorld(worldChat);
     setWorldChat("");
   };
 
-  const submitAction = (e: any) => {
+  const onSubmitAction = (e: any) => {
     e.preventDefault();
     if (!actionChat.trim()) return;
-    sendMessage("action", actionChat);
+    submitAction(actionChat);
     setActionChat("");
   };
 
@@ -45,12 +52,12 @@ export default function GameView() {
           <p className="text-xs text-[#c8b69a] italic mb-2">Only actions, no questions</p>
 
           <div className="h-56 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2">
-            {actionHistory.map((msg, idx) => (
+            {actionHistory.map((msg: string, idx: number) => (
               <div key={idx} className="whitespace-pre-wrap">{msg}</div>
             ))}
           </div>
 
-          <form onSubmit={submitAction} className="flex gap-2">
+          <form onSubmit={onSubmitAction} className="flex gap-2">
             <input
               className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]"
               placeholder="State your action..."
@@ -75,12 +82,12 @@ export default function GameView() {
         </div>
 
         <div className="flex-1 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2">
-          {worldHistory.map((msg, idx) => (
+          {worldHistory.map((msg: string, idx: number) => (
             <div key={idx} className="whitespace-pre-wrap">{msg}</div>
           ))}
         </div>
 
-        <form onSubmit={submitWorld} className="flex gap-2">
+        <form onSubmit={onSubmitWorld} className="flex gap-2">
           <input
             className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-2 py-1 text-sm text-[#3a2714]"
             placeholder="Ask the narrator..."
