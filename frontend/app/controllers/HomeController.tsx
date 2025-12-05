@@ -28,8 +28,8 @@ export default function HomeController() {
     return;
   };
 
-  const onJoinGame = (data: any) => {
-    api.joinGame(data); // player id is parsed into the GameAPIContext.
+  const onJoinGame = async (data: any) => {
+    await api.joinGame(data); // player id is parsed into the GameAPIContext.
     router.push("/game"); // changes view to the game view
   }
 

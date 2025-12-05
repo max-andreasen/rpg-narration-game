@@ -4,7 +4,9 @@ import { createContext, ReactNode, useState, useEffect } from "react";
 import { Gender, Race } from "./types";
 
 interface GameApiContextType {
-  connected: boolean;
+  connected: () => boolean;
+  reconnect: () => boolean;
+
   playerID: string | null;
   joinGame: (data: any) => Promise<void>;
   fetchRaces: () => Promise<Race[]>;
@@ -22,7 +24,6 @@ export const GameApiContext = createContext<GameApiContextType | undefined>(unde
 
 export function GameApiProvider({ children }: { children: ReactNode }) {
   const [playerID, setPlayerID] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   const [worldHistory, setWorldHistory] = useState<string[]>([]);
@@ -33,11 +34,13 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   // Fetches data from the backend about the game. 
   const fetchRaces = async () => {
+    // TODO: Update backend to provide this (not needed for MVP)
     const res = await fetch("/api/races");
     return res.json();
   };
 
   const fetchGenders = async () => {
+    // TODO: Update backend to provide this (not needed for MVP)
     const res = await fetch("/api/genders");
     return res.json();
   };
@@ -45,6 +48,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   // JOINING THE GAME.
   const joinGame = async (data: any) => {
+    console.log("Joining the game...");
     const res = await fetch("http://localhost:8000/join", { 
       method: "POST", 
       headers: {
@@ -54,9 +58,30 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     });
     const res_data = await res.json();
     setPlayerID(res_data.player_id);
+    localStorage.setItem("playerID", res_data.player_id);
     console.log(`Player with ID ${res_data.player_id} joined the game.`);
   };
 
+  // RECONNECTION LOGIC
+  // Returns true if the websocket is connected and playerID exists
+  const connected = (): boolean => {
+    return ws !== null && ws.readyState === WebSocket.OPEN && playerID !== null;
+  };
+
+  const reconnect = (): boolean => {
+    const storedPlayerID = localStorage.getItem("playerID");
+    if (!storedPlayerID || storedPlayerID == null) {
+      console.log("Recconection failed, playerID: ", playerID);
+      return false; // needs to join game again with new data, since it is not stored.
+    } 
+    const storedActionHistory = JSON.parse(localStorage.getItem("actionHistory") || "[]"); 
+    const storedWorldHistory = JSON.parse(localStorage.getItem("worldHistory") || "[]"); 
+    setPlayerID(storedPlayerID); // also triggers the useEffect, which establishes a new websocket connection.
+    setActionHistory(storedActionHistory);
+    setWorldHistory(storedWorldHistory);
+    return true;
+    // TODO: Probably want to extract more info later, like which turn it is etc.
+  };
 
   // WEBSOCKET LOGIC
   useEffect(() => {
@@ -66,14 +91,12 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     }
     const socket = new WebSocket(`ws://localhost:8000/ws?player_id=${playerID}`);
 
-    socket.onopen = () => setConnected(true);
-
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
 
-        if (data.type === "world") setWorldHistory(prev => [...prev, data.message]);
-        else if (data.type === "action") setActionHistory(prev => [...prev, data.message]);
+        if (data.type === "world") addWorldMessage(data.message);
+        else if (data.type === "action") addActionMessage(data.message);
         else console.warn("Unknown message type:", data.type);
 
       } catch (err) {
@@ -81,10 +104,10 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    socket.onclose = () => setConnected(false);
     socket.onerror = (err) => console.error("WebSocket error:", err);
 
     setWs(socket);
+    console.log("Connected successfully to websocket.");
     return () => socket.close();
   }, [playerID]);
  
@@ -92,13 +115,10 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const sendMessage = (type: "action" | "world" | "system", msg: string) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       const payload = JSON.stringify({ type, message: msg });
-      console.log("Sending WS message...", payload);
       ws.send(payload);
       if (type == "world") { 
-        console.log("Adding world message...")
         addWorldMessage(msg);
       } else if (type == "action") {
-        console.log("Adding action message...")
         addActionMessage(msg);
       } else {
         console.warn("Type is not valid");
@@ -108,18 +128,31 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Keeps history of chat. Needed? 
+  // Keeps history of chat.
   const addWorldMessage = (msg: string) => {
-    setWorldHistory(prev => [...prev, msg]);
+    setWorldHistory(prev => {
+      const updated = [...prev, msg];
+      localStorage.setItem("worldHistory", JSON.stringify(updated));
+      return updated;
+    });
+  };
+  const addActionMessage = (msg: string) => {
+    setActionHistory(prev => {
+      const updated = [...prev, msg];
+      localStorage.setItem("actionHistory", JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  const addActionMessage = (msg: string) => {
-    setActionHistory(prev => [...prev, msg]);
-  };
+  const endTurn = () => {
+    // TODO: Add additional info to localStorage
+    // localStorage only stores strings, need to stringify the lists / arrays
+  }
 
   return (
     <GameApiContext.Provider value={{ 
       connected,
+      reconnect,
       playerID, 
       joinGame, 
       fetchRaces, 

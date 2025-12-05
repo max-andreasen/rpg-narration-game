@@ -150,13 +150,9 @@ async def join(request: JoinRequest):
     return {"player_id": pid, "players": list(game_session.players)}
 
 
-@app.post("/rejoin")
-async def join(player_id):
-    return "rejoin"
-
-
 @app.post("/remove")
 async def remove_player(player_id):
+    # TODO: Remove player from database as well. 
     game_session.delete_player(player_id)
 
 
