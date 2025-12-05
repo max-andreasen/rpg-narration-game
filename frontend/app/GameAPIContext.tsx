@@ -114,7 +114,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   // CHAT LOGIC
   const sendMessage = (type: "action" | "world" | "system", msg: string) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
-      const payload = JSON.stringify({ type, message: msg });
+      const payload = JSON.stringify({ pid: playerID, type: type, message: msg });
       ws.send(payload);
       if (type == "world") { 
         addWorldMessage(msg);

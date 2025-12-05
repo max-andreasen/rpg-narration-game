@@ -8,9 +8,11 @@ class JoinRequest(BaseModel):
     startingItem: str
     description: str
 
+
 class PlayerMessage(BaseModel):
     player_id: str
     message: str
+
 
 class PlayerCreate(BaseModel):
     id: str
@@ -22,3 +24,8 @@ class PlayerCreate(BaseModel):
     position: Union[dict, str]
     hp: Union[int, float]
     character_description: str
+
+
+class GameState(BaseModel):
+    narrator_output: str
+    player_messages: dict
