@@ -8,12 +8,12 @@ from typing import Any, Dict, Optional
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+import json
 from datetime import datetime
+from collections import defaultdict
 
 load_dotenv()
-
 MONGO_URL = os.getenv("MONGO_URL")
-
 client = MongoClient(MONGO_URL, tls=True, tlsAllowInvalidCertificates=True)
 
 
@@ -79,3 +79,85 @@ def clear_db():
     players_collection.drop()
     npcs_collection.drop()
     game_context_collection.drop()
+
+
+def read_player_state():
+    """Fetches all players and formats them into a dictionary keyed by ID."""
+    player_collection = mongo_db["players"]
+    play_list = list(player_collection.find({}))
+    play_dict = {}
+    
+    for player in play_list:
+        pid = player.get('id')
+        if pid is None:      
+            continue
+
+        play_dict[pid] = {
+            'name': player.get('name', 'Unknown Wanderer'),
+            'location': player.get('position', 'startingVillage'), # Default to start
+            'health': player.get('hp', 100),
+            'inventory': player.get('items', []),
+        }
+    return play_dict
+
+def read_json_states(players_dict: dict) -> str:
+    # --- 1. Load Static Data (World, Items, NPCs) ---
+    # (Using relative paths as established previously)
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    def load_json(filename):
+        path = os.path.join(CURRENT_DIR, 'json', filename)
+        with open(path, 'r') as f:
+            return json.load(f)
+
+    char_map = load_json('character_state_map.json')
+    item_map = load_json('items_state_map.json')
+    loc_map = load_json('world_state_map.json')
+
+    # --- 2. Group Players by Location ---
+    # This allows the LLM to know who is standing next to whom
+    players_by_location = defaultdict(list)
+    for pid, data in players_dict.items():
+        loc = data['location']
+        players_by_location[loc].append(data)
+
+    # --- 3. Build Markdown Output ---
+    output_lines = ["# GLOBAL GAME STATE\n"]
+
+    # Iterate through every location that has at least one player
+    for location_key, players_here in players_by_location.items():
+        
+        # Get Location Details
+        loc_data = loc_map["locations"].get(location_key, {})
+        loc_desc = loc_data.get("description", "A void.")
+        loc_exits = ", ".join(loc_data.get("canGoTo", []))
+        
+        output_lines.append(f"## LOCATION: {location_key}")
+        output_lines.append(f"> {loc_desc}")
+        output_lines.append(f"**Exits:** {loc_exits}\n")
+
+        # List NPCs at this location
+        output_lines.append("**NPCs Present:**")
+        npcs = loc_data.get("npcs", [])
+        if npcs:
+            for npc_key in npcs:
+                npc_obj = char_map["characters"].get(npc_key, {})
+                output_lines.append(f"- {npc_key}: {npc_obj.get('description')} (HP: {npc_obj.get('health')})")
+        else:
+            output_lines.append("- None")
+
+        # List PLAYERS at this location
+        output_lines.append("\n**PLAYERS HERE:**")
+        for p in players_here:
+            # Resolve Inventory Names
+            inv_names = []
+            for i_key in p['inventory']:
+                item_obj = item_map["items"].get(i_key, {})
+                inv_names.append(item_obj.get('name', i_key)) # Fallback to ID if name missing
+            
+            inv_str = ", ".join(inv_names) if inv_names else "Empty handed"
+            output_lines.append(f"- **{p['name']}** (HP: {p['health']}) | Holding: [{inv_str}]")
+
+        output_lines.append("\n" + "-"*30 + "\n")
+
+    return "\n".join(output_lines)

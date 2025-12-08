@@ -169,7 +169,7 @@ async def join(request: JoinRequest):
         "character_description": request.description,
         "items": [request.startingItem],
         "hp": 100,
-        "position": "Test Location",
+        "position": "startingVillage",
     }
 
     try:

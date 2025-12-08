@@ -11,27 +11,43 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 
+
 load_dotenv(override=True)
+
+def json_formattter() -> str:
+    # in the game state, the play
+    #1. reads from the db the players
+    #2. uses the state to get keys to fetch from the json files 
+    #3. builds a string representation of the game state
+    #4. returns the string
+    
+    players = read_player_state()
+    world_state=read_json_states(players)
+    print(world_state)
+    return world_state
 
 
 class Narrator:
-
     def __init__(self):
         self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0.99)
 
         self.system_prompt = (
-            "You are the narrator of a role-playing adventure."
-            "You describe the world, interpret player actions, maintain consistency,"
-            "and continue the story based on game state."
+            "You are the narrator of a role-playing adventure. "
+            "You describe the world, interpret player actions, maintain consistency, "
+            "and continue the story based on the provided GAME STATE context."
         )
 
-    def build_prompt(self, session_id: str, game_state: dict, n_turns: int):
+    def build_prompt(self, session_id: str, game_state: dict, world_context: str, n_turns: int):
         messages = []
 
         # System prompt
         messages.append(SystemMessage(content=self.system_prompt))
 
         # Game state summary
+        if world_context:
+            messages.append(SystemMessage(content=f"WORLD CONTEXT:\n{world_context}"))
+            # this is where we say what the world looks like, items, NPCs etc.
+        
         if game_state:
             messages.append(SystemMessage(content=f"GAME STATE:\n{game_state}"))
 
@@ -49,7 +65,8 @@ class Narrator:
         return messages
 
     def generate(self, session_id: str, game_state: dict) -> str:
-        prompt = self.build_prompt(session_id, game_state, n_turns=20)
+        world_context = read_json_states(read_player_state())
+        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20)
         ai_message = self.model.invoke(prompt)
         content = ai_message.content
 

@@ -13,6 +13,11 @@ interface HomeProps {
 export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
   const [race, setRace] = useState<"human" | "orc" | "elf">("human");
   const [gender, setGender] = useState<"m" | "f">("m");
+  const startingItems = [
+    { id: "rustySword", label: "Rusty Sword" },
+    { id: "lantern", label: "Lantern" },
+    { id: "compass", label: "Compass" }
+  ];
 
   const raceMeta = races.find((r) => r.id === race);
   const portraitSrc = raceMeta
@@ -127,11 +132,7 @@ export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
                 Starting item
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "boots", label: "Boots of\nWater Walking" },
-                  { id: "lantern", label: "Lantern" },
-                  { id: "dagger", label: "Dagger" },
-                ].map((item) => (
+                {startingItems.map((item) => (
                   <label
                     key={item.id}
                     className="flex flex-col items-center rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/90 px-2 py-2 text-xs sm:text-sm text-[#3a2714] cursor-pointer hover:border-[#e3c779] hover:bg-[#f7e8c6] text-center whitespace-pre-line"
