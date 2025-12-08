@@ -14,18 +14,6 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-def json_formattter() -> str:
-    # in the game state, the play
-    #1. reads from the db the players
-    #2. uses the state to get keys to fetch from the json files 
-    #3. builds a string representation of the game state
-    #4. returns the string
-    
-    players = read_player_state()
-    world_state=read_json_states(players)
-    print(world_state)
-    return world_state
-
 
 class Narrator:
     def __init__(self):
@@ -82,7 +70,7 @@ class Narrator:
                 session_id=session_id,
                 turn_index=next_turn_idx,
                 narration=content,
-                player_prompts={"P1": "test", "P2": "test"},  # Placeholder
+                player_prompts=game_state.get("player_messages", {})
             )
             print(f"Turn {next_turn_idx} saved in DB.")
 

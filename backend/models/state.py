@@ -13,10 +13,38 @@ from typing import Tuple, Optional, Dict, Any, List
 import json
 
 
-
-
 load_dotenv(override=True)
 OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_ROOT = os.path.dirname(CURRENT_DIR)
+JSON_DIR = os.path.join(BACKEND_ROOT, 'db', 'json')
+WORLD_STATE_PATH = os.path.join(JSON_DIR, 'world_state_map.json')
+ITEMS_STATE_PATH = os.path.join(JSON_DIR, 'items_state_map.json')
+
+def _load_json(path: str) -> dict:
+    """Helper to safely load a JSON file."""
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Could not find configuration file at: {path}")
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+    
+def get_all_locations() -> list[str]:
+    """
+    Extracts a list of all valid location IDs from the world state dictionary.
+    """
+    file = _load_json(WORLD_STATE_PATH)
+    return list(file.get("locations", {}).keys())
+
+def get_all_item_names() -> list[str]:
+    """
+    Extracts a list of all item keys from the items state dictionary.
+    """
+    # specific_items is the dictionary containing 'rustySword', 'lantern', etc.
+    file = _load_json(ITEMS_STATE_PATH)
+    specific_items = file.get("items", {})
+    return list(specific_items.keys())
+
 
 
 class GameState:
@@ -25,6 +53,8 @@ class GameState:
         self.dialouge = db["game_context"] # conext
         self.previous_state = None
         self.current_state = None
+        self.possible_locations = get_all_locations()
+        self.possible_items = get_all_item_names()
 
     def read_state(self):
         play_list = list(self.player_state.find({}))
@@ -104,24 +134,41 @@ class GameState:
             if missing:
                 errors.append(f"{path} missing keys: {', '.join(sorted(missing))}.")
 
-            # only type-check if key exists
+            # --- Name Validation ---
             if "name" in pdata and not isinstance(pdata["name"], str):
                 errors.append(f'{path}["name"] must be str, got {type(pdata["name"]).__name__}.')
 
-            if "location" in pdata and not isinstance(pdata["location"], str):
-                errors.append(
-                    f'{path}["location"] must be str, got {type(pdata["location"]).__name__}.'
-                )
+            # --- Location Validation ---
+            if "location" in pdata:
+                if not isinstance(pdata["location"], str):
+                    errors.append(f'{path}["location"] must be str.')
+                # NEW LOGIC: Check against possible_locations
+                elif pdata["location"] not in self.possible_locations:
+                    errors.append(
+                        f'{path}["location"] "{pdata["location"]}" is invalid. '
+                        f'Allowed: {self.possible_locations}'
+                    )
 
+            # --- Health Validation ---
             if "health" in pdata and not isinstance(pdata["health"], int):
                 errors.append(
                     f'{path}["health"] must be int, got {type(pdata["health"]).__name__}.'
                 )
 
-            if "inventory" in pdata and not isinstance(pdata["inventory"], list):
-                errors.append(
-                    f'{path}["inventory"] must be list, got {type(pdata["inventory"]).__name__}.'
-                )
+            # --- Inventory Validation ---
+            if "inventory" in pdata:
+                if not isinstance(pdata["inventory"], list):
+                    errors.append(f'{path}["inventory"] must be list.')
+                else:
+                    # NEW LOGIC: Check items against possible_items
+                    for item in pdata["inventory"]:
+                        if not isinstance(item, str):
+                            errors.append(f'{path}["inventory"] contains non-string item.')
+                        elif item not in self.possible_items:
+                            errors.append(
+                                f'{path}["inventory"] contains invalid item "{item}". '
+                                f'Allowed: {self.possible_items}'
+                            )
 
         return len(errors) == 0, errors
     
@@ -166,9 +213,14 @@ class GameState:
 class State_LLM:
 
     def __init__(self):
-        self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+        self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0.3)
+        self.possible_locations = get_all_locations()
+        self.possible_items = get_all_item_names()
+        locs_str = ", ".join(self.possible_locations)
+        items_str = ", ".join(self.possible_items)
 
-        self.system_prompt = """
+
+        self.system_prompt = f"""
         You are the authoritative state manager for a cooperative role-playing game.
 
         You always:
@@ -177,20 +229,27 @@ class State_LLM:
         - Apply only the logically necessary updates to the game state.
         - Leave all unrelated fields unchanged.
 
-        Game state format (JSON):
-        {
-        "players": {
-            "<player_id>": {
-            "name": "<string>",
-            "location": "<string>",
-            "health": <int>,
-            "inventory": ["<string>", ...]
-            },
-            ...
-        }
-        }
+        ### STRICT DATA CONSTRAINTS
+        You must ONLY use values from the following lists. Do not invent new names.
+        - **Allowed Locations:** [{locs_str}]
+        - **Allowed Items:** [{items_str}]
+        
+        *If a player tries to go to a location or pick up an item not in these lists, ignore that specific change.*
 
-        Your task on each call:
+        ### GAME STATE FORMAT (JSON)
+        {{
+            "players": {{
+                "<player_id>": {{
+                    "name": "<string>",
+                    "location": "<string from Allowed Locations>",
+                    "health": <int>,
+                    "inventory": ["<string from Allowed Items>", ...]
+                }},
+                ...
+            }}
+        }}
+
+        ### YOUR TASK
         1) Read the previous game state.
         2) Consider the narrator description and player messages.
         3) Update locations, health, and inventories to reflect the new situation.
@@ -259,7 +318,6 @@ class State_LLM:
 
 
 
-
 def run_state_management():
     MAX_RETRIES = 2
     # It's better to manage the Mongo URL outside if this is run in a production environment
@@ -291,7 +349,7 @@ def run_state_management():
             game_state=previous_state, 
             validation_errors=errors_to_report
         )
-        
+
         # Validate the generated state
         is_valid, errs = state_manager.validate_state(new_state_raw)
         if is_valid:

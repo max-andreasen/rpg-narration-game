@@ -25,6 +25,7 @@ import json
 from session import game_session
 from models.narrator import Narrator
 from models.world_model import WorldModel
+from models.state import run_state_management
 
 # Importing schemas / models.
 from schemas import PlayerMessage, JoinRequest, PlayerCreate
@@ -117,9 +118,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 all_messages = game_session.add_message(data_sender_id, data_message)
                 if all_messages: 
                     # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
-                    print("ALL MESSAGES SENT!")
-                    print(world_model.generate("session_1", "Do ghouls whipser apologies?"))
+                    
                     narrator_message = narrator.generate("session_1", {"player_messages": all_messages})
+                    run_state_management() # updates the game state based on the actions taken by players
                     game_session.new_turn()
                     await ws_manager.broadcast_message(
                         json.dumps({
