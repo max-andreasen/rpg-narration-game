@@ -1,0 +1,48 @@
+{
+  "locations": {
+    "startingVillage": {
+      "description": "A quiet, rural settlement nestled in a valley, surrounded by farmlands. It serves as a safe haven and a starting point for all adventures, though life here is simple and mundane.",
+      "canGoTo": [
+        "enchantedForest",
+        "rockyHills"
+      ],
+      "items": [
+        "rustySword",
+        "healingPotion"
+      ],
+      "npcs": [
+        "Elder",
+        "Blacksmith"
+      ]
+    },
+    "enchantedForest": {
+      "description": "A dense, ancient wood where the trees whisper secrets and the air hums with faint magic. Paths twist and disappear, making it easy to get lost. When getting lost, the player is transported into a adjacent location instead of the intended one. Using a compass, the player never gets lost in the woods!",
+      "canGoTo": [
+        "obsidianTower"
+      ],
+      "items": [],
+      "npcs": [
+        "Fairy",
+        "Goblin"
+      ]
+    },
+    "rockyHills": {
+      "description": "A dry and desolate area filled with jagged rocks and steep inclines. The terrain is challenging, and the wind howls through the crags. Beware of sudden drops and loose stones. Up on the largest cliff, there is a tressure chest in clear sight. To climb up the cliff, a sturdy rope is required. Hidden among the rocks are **caves** that may hold secrets. Inside the caves, the giant spider resides. Traversing these safely requires a lantern.",
+      "canGoTo": [
+        "obsidianTower"
+      ],
+      "items": [],
+      "npcs": [
+        "GiantSpider"
+      ]
+    },
+    "obsidianTower": {
+      "description": "A foreboding spire of black, volcanic glass that pierces the clouds. The atmosphere is heavy and oppressive, and the only entrance is guarded by powerful enchantments. Inside, expect pitch dark windeling corridors. A lantern here would be nice to have!",
+      "canGoTo": [],
+      "items": [],
+      "npcs": [
+        "DarkWizard"
+      ]
+    }
+  }
+}

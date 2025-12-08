@@ -1,0 +1,40 @@
+{
+  "characters": {
+    "Elder": {
+      "description": "The wise, aged leader of the Starting Village.",
+      "location": "startingVillage",
+      "health": 50,
+      "evilness": 0
+    },
+    "Blacksmith": {
+      "description": "A burly, kind-hearted artisan who mends tools and weapons.",
+      "location": "startingVillage",
+      "health": 80,
+      "evilness": 0
+    },
+    "Fairy": {
+      "description": "A small, mischievous sprite of the woods who offers guidance.",
+      "location": "enchantedForest",
+      "health": 30,
+      "evilness": 10
+    },
+    "Goblin": {
+      "description": "A small, green-skinned creature known for petty theft and ambush.",
+      "location": "enchantedForest",
+      "health": 45,
+      "evilness": 75
+    },
+    "GiantSpider": {
+      "description": "A massive, venomous arachnid that preys on travelers in the hills.",
+      "location": "rockyHills",
+      "health": 120,
+      "evilness": 90
+    },
+    "DarkWizard": {
+      "description": "The powerful, malevolent sorcerer who dwells at the top of the tower.",
+      "location": "obsidianTower",
+      "health": 200,
+      "evilness": 100
+    }
+  }
+}

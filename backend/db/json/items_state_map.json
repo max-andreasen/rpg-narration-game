@@ -1,0 +1,58 @@
+{
+  "items": {
+    "rustySword": {
+      "description": "A well-worn sword with patches of rust along the blade. Looks barely functional.",
+      "effect": "Low damage weapon, better than nothing.",
+      "location": "startingVillage",
+      "damage": 5
+    },
+    "healingPotion": {
+      "description": "A small vial filled with a glowing, red liquid.",
+      "effect": "Restores a moderate amount of health instantly.",
+      "location": "startingVillage",
+      "damage": 0
+    },
+    "glowingMushroom": {
+      "description": "A fungus that emits a soft, ethereal light.",
+      "effect": "Provides temporary light in dark areas. May cause slight hallucinations.",
+      "location": "enchantedForest",
+      "damage": 0
+    },
+    "silverKey": {
+      "description": "A delicate key made of polished silver.",
+      "effect": "Can unlock a specific door or chest.",
+      "location": "enchantedForest",
+      "damage": 0
+    },
+    "climbingGear": {
+      "description": "A set of durable ropes and sturdy metal picks.",
+      "effect": "Allows safe traversal of steep terrain and cliffs.",
+      "location": "rockyHills",
+      "damage": 0
+    },
+    "ironOre": {
+      "description": "Chunks of heavy, reddish-brown rock.",
+      "effect": "Can be smelted into useful tools or sold for coin.",
+      "location": "rockyHills",
+      "damage": 0
+    },
+    "darkCrystal": {
+      "description": "A jagged shard of black, cold crystal that seems to absorb light.",
+      "effect": "A powerful component for dark magic or a valuable treasure.",
+      "location": "obsidianTower",
+      "damage": 10
+    },
+    "ancientScroll": {
+      "description": "A brittle, yellowed parchment tied with a ribbon. The writing is in an unknown language.",
+      "effect": "Contains a powerful spell or forgotten knowledge.",
+      "location": "obsidianTower",
+      "damage": 0
+    },
+    "lantern": {
+    "description": "A sturdy, oil-filled lamp with glass panes and a metal frame.",
+    "effect": "Provides bright, sustained light, negating darkness penalties in locations like the **enchantedForest** or **obsidianTower**.",
+    "location": "startingVillage",
+    "damage": 0
+  }
+  }
+}
