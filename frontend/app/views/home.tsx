@@ -30,6 +30,7 @@ export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
     e.preventDefault(); // stops page reload
     const formData = new FormData(e.currentTarget);
     const data = {
+      name: formData.get("name"),
       race: formData.get("race"),
       gender: formData.get("gender"),
       startingItem: formData.get("startingItem"),
@@ -76,6 +77,19 @@ export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
 
           {/* FORM */}
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Name */}
+            <div>
+              <div className="text-xs font-semibold tracking-wide text-[#5b4024] uppercase mb-2">
+                Character name
+              </div>
+              <input
+                type="text"
+                name="name"
+                className="w-full rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714] placeholder-[#a18457] focus:outline-none focus:border-[#e3c779]"
+                placeholder="Enter your character's name..."
+                required
+              />
+            </div>
             {/* Race */}
             <div>
               <div className="text-xs font-semibold tracking-wide text-[#5b4024] uppercase mb-2">

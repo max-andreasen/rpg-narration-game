@@ -28,6 +28,18 @@ def get_player(player_id: str) -> Optional[Dict[str, Any]]:
     return players_collection.find_one({"id": player_id})
 
 
+def get_all_players() -> list[Dict[str, Any]]:
+    players = []
+    for player in players_collection.find():
+        players.append({
+            "id": player.get("id"),
+            "name": player.get("name"),
+            "race": player.get("race"),
+            "gender": player.get("gender"),
+        })
+    return players
+
+
 def add_player(player_data: Dict[str, Any]) -> Dict[str, Any]:
     if "id" not in player_data:
         raise ValueError("ID is missing")

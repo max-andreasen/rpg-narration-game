@@ -153,6 +153,12 @@ async def root():
 async def get_sesssion():
     return game_session
 
+@app.get("/players")
+async def players():
+    players = get_all_players()
+    return {"players": players}
+
+
 @app.post("/join")
 async def join(request: JoinRequest):
 
@@ -164,6 +170,7 @@ async def join(request: JoinRequest):
 
     new_player_data = {
         "id": pid,
+        "name": request.name,
         "race": request.race,
         "gender": request.gender,
         "starting_item": request.startingItem,

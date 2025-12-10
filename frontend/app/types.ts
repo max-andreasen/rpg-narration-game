@@ -9,3 +9,10 @@ export interface Gender {
   label: string;
 }
 
+export interface Player {
+  id: string;
+  name: string;
+  race: string;
+  gender: string;
+}
+

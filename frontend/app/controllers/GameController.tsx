@@ -15,6 +15,23 @@ export default function GameController() {
     
     const { worldHistory, actionHistory, sendMessage } = api;
 
+    const [worldChat, setWorldChat] = useState("");
+    const [actionChat, setActionChat] = useState("");
+
+    const onSubmitWorld = (e: any) => {
+        e.preventDefault();
+        if (!worldChat.trim()) return;
+        submitWorld(worldChat);
+        setWorldChat("");
+    };
+
+    const onSubmitAction = (e: any) => {
+        e.preventDefault();
+        if (!actionChat.trim()) return;
+        submitAction(actionChat);
+        setActionChat("");
+    };
+
     // Client just sends messages. The websocket connection automatically handles responses. 
     const submitWorld = async (worldChat: string) => {
         if (!worldChat.trim()) return; // nothing inputted
@@ -64,6 +81,14 @@ export default function GameController() {
             submitWorld={submitWorld}
             submitAction={submitAction}
             resetGame={resetGame}
+            race={api.race}
+            gender={api.gender}
+            worldChat={worldChat}
+            actionChat={actionChat}
+            setWorldChat={setWorldChat}
+            setActionChat={setActionChat}
+            onSubmitWorld={onSubmitWorld}
+            onSubmitAction={onSubmitAction}
         />
     );
 }

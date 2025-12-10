@@ -3,6 +3,7 @@ from typing import List, Union
 
 
 class JoinRequest(BaseModel):
+    name: str
     race: str
     gender: str
     startingItem: str
