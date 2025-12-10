@@ -30,11 +30,10 @@ export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
     e.preventDefault(); // stops page reload
     const formData = new FormData(e.currentTarget);
     const data = {
-      name: formData.get("name"),
+      name: formData.get("name") || "Eldorian the great",
       race: formData.get("race"),
       gender: formData.get("gender"),
-      startingItem: formData.get("startingItem"),
-      description: formData.get("description"),
+      startingItem: formData.get("startingItem")
     };
     onJoinGame(data);
   };
@@ -86,7 +85,7 @@ export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
                 type="text"
                 name="name"
                 className="w-full rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714] placeholder-[#a18457] focus:outline-none focus:border-[#e3c779]"
-                placeholder="Enter your character's name..."
+                placeholder="Eldorian the great..."
                 required
               />
             </div>
@@ -155,26 +154,13 @@ export default function HomeView({ genders, races, onJoinGame }: HomeProps) {
                       type="radio"
                       name="startingItem"
                       value={item.id}
-                      defaultChecked={item.id === "boots"}
+                      defaultChecked={item.id === "rustySword"}
                       className="mb-1 accent-[#8c5d25]"
                     />
                     <span>{item.label}</span>
                   </label>
                 ))}
               </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <div className="text-xs font-semibold tracking-wide text-[#5b4024] uppercase mb-2">
-                Character description
-              </div>
-              <textarea
-                name="description"
-                rows={4}
-                className="w-full rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714] placeholder-[#a18457] focus:outline-none focus:border-[#e3c779]"
-                placeholder="A wandering elf scholar, hungry for knowledge and glory..."
-              />
             </div>
 
             {/* Join button */}
