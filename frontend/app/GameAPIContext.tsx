@@ -166,9 +166,11 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
     socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data); // TODO: Check correct type here? 
+        const message_type = data.type;
+        const sender = data.sender; // sender can be player_id, "narrator" or "system"
 
-        if (data.type === "world")
+        if (data.type === "narration")
           addWorldMessage({ sender: "narrator", message: data.message });
         else if (data.type === "action")
           addActionMessage({ sender: "narrator", message: data.message });

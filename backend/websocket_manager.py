@@ -19,12 +19,13 @@ class WebsocketManager():
     async def disconnect(self, player_id):
         self.active_connections.pop(player_id, None)
     
-    async def broadcast_message(self, message):
+    async def broadcast_message(self, data_packet):
+        print("Sending messages to all players...")
         for ws in self.active_connections.values():
-            await ws.send_text(message)
+            await ws.send_text(data_packet)
     
-    async def private_message(self, player_id, message):
+    async def private_message(self, player_id, data_packet):
         ws = self.active_connections[player_id]
-        await ws.send_text(message)
+        await ws.send_text(data_packet)
     
 ws_manager = WebsocketManager()

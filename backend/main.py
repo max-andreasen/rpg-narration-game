@@ -93,7 +93,7 @@ async def websocket_endpoint(websocket: WebSocket):
             
             # TODO: Refactor this into its own module that takes data as input and generates response object as output.
 
-            data_type = data.get("type")
+            data_type = data.get("type") # TODO: Connect LLM that parse type here. Types from frontend should be action, question or other (maybe?)
             data_message = data.get("message")
             data_sender_id = data.get("pid") # the player ID sending the message
 
@@ -102,20 +102,25 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # Sends data to LLMs
             if data_type == "world":
-                # TODO: Maybe add this conversation to some history. It is already kept in frontend though. 
-                # TODO: Fetch the player state / game state, so the model has context. 
-                # TODO: Invoke the narrator, with question mode. 
-                # TODO: Send a private message back with type "world"
-                narrator_message = "I am an LLM supposed to answer your question.. Please connect me!"
+                narrator_message = "Nice question! I need to route this to an LLM that can answer this question."
                 await ws_manager.private_message(
                     player_id,
                     json.dumps({
+                        "sender": "narrator",
                         "type": "world",
                         "message": narrator_message
                     })
                 )
+            # Handles when player 
             elif data_type == "action":
                 all_messages = game_session.add_message(data_sender_id, data_message)
+                await ws_manager.broadcast_message(
+                    json.dumps({
+                        "sender": data_sender_id,
+                        "type": "action",
+                        "message": data_message,
+                    })
+                )
                 if all_messages: 
                     # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
                     
@@ -124,7 +129,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     game_session.new_turn()
                     await ws_manager.broadcast_message(
                         json.dumps({
-                            "type": "action",
+                            "sender": "narrator",
+                            "type": "narration",
                             "message": narrator_message
                         })
                     )
@@ -133,6 +139,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await ws_manager.private_message(
                     player_id,
                     json.dumps({
+                        "sender": "system",
                         "type": "system",
                         "message": "Something went wrong..."
                     })
