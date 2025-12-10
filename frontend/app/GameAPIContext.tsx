@@ -55,6 +55,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const fetchPlayers = async () => {
     try {
       const res = await fetch("http://localhost:8000/players");
+      console.log("Fetched player:", res);
       if (res.ok) {
         const data = await res.json();
         setPlayers(data.players);

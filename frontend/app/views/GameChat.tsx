@@ -23,18 +23,11 @@ interface Props {
 
 export default function GameChat({ worldHistory, actionHistory, submitWorld, submitAction, race, gender, worldChat, actionChat, setWorldChat, setActionChat, onSubmitWorld, onSubmitAction }: Props) {
     return (
-        <div className="w-full flex justify-center gap-x-8 mt-20">
+        <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 mt-20 md:mt-0 md:ml-64">
 
           {/* ACTION WINDOW */}
-          <div className="max-w-6xl w-full mb-6">
-            <h2 className="text-xl font-semibold text-[#f8ecd0] mb-1">
-              Action Window
-            </h2>
-            <p className="text-xs text-[#c8b69a] italic mb-2">
-              Only actions, no questions
-            </p>
-
-            <div className="h-200 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2">
+          <div className="max-w-6xl w-full mb-6 flex flex-col mt-10">
+            <div className="flex-grow h-96 md:h-128 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2">
               {actionHistory.map((msg, idx) => (
                 <ChatMessage
                   key={idx}

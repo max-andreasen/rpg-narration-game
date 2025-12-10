@@ -155,26 +155,28 @@ async def get_sesssion():
 
 @app.get("/players")
 async def players():
-    players = get_all_players()
+    players = game_session.get_players()
     return {"players": players}
 
 
 @app.post("/join")
 async def join(request: JoinRequest):
 
-    # TODO: Check the sent player id and compare with the DB. 
-    # TODO: Need to rework the player system a bit. 
+    name = request.name
+    race = request.race
+    gender = request.gender
+
     # req contains a JSON with the data
-    pid = game_session.generate_player_id()
-    game_session.players.add(pid)
+    pid = game_session.add_player(name=name, race=race, gender=gender)
+
+    print("Player assigned ID: ", pid)
 
     new_player_data = {
         "id": pid,
-        "name": request.name,
-        "race": request.race,
-        "gender": request.gender,
+        "name": name,
+        "race": race,
+        "gender": gender,
         "starting_item": request.startingItem,
-        "character_description": request.description,
         "items": [request.startingItem],
         "hp": 100,
         "position": "startingVillage",

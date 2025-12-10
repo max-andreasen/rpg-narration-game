@@ -3,16 +3,22 @@ import random
 
 class GameSession:
     def __init__(self):
-        self.players = set()
+        self.players = {} # id: race gender name 
         self.messages = {}
         self.turn = 0
 
-    def generate_player_id(self):
+    def _generate_player_id(self):
         if self.players:
             max_pid = max(int(pid) for pid in self.players)
             return str(max_pid + 1)
         else:
             return str(1)
+        
+    def add_player(self, name: str, race: str, gender: str): 
+        pid = self._generate_player_id()
+        player_object = {"name": name, "race": race, "gender": gender}
+        self.players[pid] = player_object
+        return pid
 
     def get_players(self):
         return self.players
@@ -42,7 +48,7 @@ class GameSession:
         self.players.pop(pid)
 
     def clear_session(self):
-        self.players = set()
+        self.players = {}
         self.messages = {}
         self.turn = 0
 

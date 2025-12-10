@@ -46,23 +46,16 @@ export default function GameView({
   };
 
   return (
-    <div className="relative min-h-screen flex">
+    <div className="relative min-h-screen flex flex-col md:flex-row">
       {/* RESET BUTTON */}
       <button
         onClick={onResetGame}
-        className="absolute top-4 left-4 z-20 rounded-md border-2 border-[#e3c779] bg-[#950606] px-4 py-2 text-[#f9edd3] font-semibold shadow-[0_3px_0_#5a3b1a] active:translate-y-0.5"
+        className="absolute bottom-4 left-4 z-20 rounded-md border-2 border-[#e3c779] bg-[#950606] px-4 py-2 text-[#f9edd3] font-semibold shadow-[0_3px_0_#5a3b1a] active:translate-y-0.5"
       >
         Reset Game
       </button>
 
       <PlayersView />
-
-      {/* TITLE - Added: Centered top with medieval styling to match theme */}
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none">
-        <h1 className="font-serif text-3xl md:text-4xl font-extrabold text-[#f9edd3] tracking-widest uppercase drop-shadow-[0_3px_3px_rgba(0,0,0,0.8)] border-b-4 border-[#950606] pb-1 text-center">
-          Legends of The Language Model
-        </h1>
-      </div>
 
       {/* MAP BACKGROUND */}
       <Image  
@@ -73,7 +66,7 @@ export default function GameView({
       />
 
       {/* MAIN CONTENT AREA */}
-      <div className="w-full flex justify-center gap-x-8">
+      <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 px-4 md:px-0">
         <GameChat
             worldHistory={worldHistory}
             actionHistory={actionHistory}
