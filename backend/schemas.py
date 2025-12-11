@@ -25,6 +25,11 @@ class PlayerCreate(BaseModel):
     character_description: str
 
 
+class WebsocketDataPacket(BaseModel):
+    sender: str
+    type: str
+    message: str
+
 class GameState(BaseModel):
     narrator_output: str
     player_messages: dict

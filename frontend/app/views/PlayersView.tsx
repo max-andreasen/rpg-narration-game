@@ -25,19 +25,21 @@ export function PlayersView() {
               alt={`${me.race} ${me.gender}`}
               width={40}
               height={40}
-              className="mr-2"
+              className="mr-2 w-[40px] h-[40px]"
+              loading="eager"
             />
             <span>{me.name} (You)</span>
           </li>
         )}
         {otherPlayers.map((player) => (
-          <li key={player.id} className="flex items-center mb-2">
+          <li key={player.pid} className="flex items-center mb-2">
             <Image
               src={getSpritePath(player.race, player.gender)}
               alt={`${player.race} ${player.gender}`}
               width={40}
               height={40}
-              className="mr-2"
+              className="mr-2 w-[40px] h-[40px]"
+              loading="eager"
             />
             <span>{player.name}</span>
           </li>

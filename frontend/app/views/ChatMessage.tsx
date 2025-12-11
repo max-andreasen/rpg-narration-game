@@ -4,37 +4,33 @@ import Image from "next/image";
 
 interface ChatMessageProps {
   message: string;
-  sender: "player" | "narrator";
+  sender: string;
+  name?: string;
   race?: string | null;
   gender?: string | null;
 }
 
-const RACES_PREFIX_MAP: { [key: string]: string } = {
-  human: "h",
-  orc: "o",
-  elf: "e",
-};
-
 export default function ChatMessage({
   message,
   sender,
+  name,
   race,
   gender,
 }: ChatMessageProps) {
-  const isPlayer = sender === "player";
+  const isNarrator = sender === "narrator";
+  const isPlayer = !isNarrator;
 
   const getPortraitSrc = () => {
-    if (isPlayer && race && gender) {
-      const racePrefix = RACES_PREFIX_MAP[race];
-      if (racePrefix) {
-        return `/races/${racePrefix}_${gender}.png`;
-      }
-    }
-    return "/races/narrator.png"; // A default narrator icon
+    if (!isPlayer) return "/races/narrator.png";
+    if (!race || !gender) return "/races/narrator.png";
+
+    const racePrefix = race.charAt(0).toLowerCase();
+    const genderPrefix = gender.charAt(0).toLowerCase();
+    return `/races/${racePrefix}_${genderPrefix}.png`;
   };
 
   const portraitSrc = getPortraitSrc();
-  const altText = isPlayer ? `${race} ${gender}` : "Narrator";
+  const altText = isPlayer ? name ?? `${race ?? "Unknown"} ${gender ?? ""}` : "Narrator";
 
   return (
     <div className={`flex items-start gap-3 ${isPlayer ? "justify-end" : ""}`}>
