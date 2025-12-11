@@ -31,7 +31,7 @@ export default function GameChat({ worldHistory, actionHistory, submitWorld, sub
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const lastMessage = actionHistory[actionHistory.length - 1];
     const displayedMessage = useTypewriter(lastMessage?.sender === "narrator" ? lastMessage?.message ?? "" : "", 10);
-    const { players, playerID } = useContext(GameApiContext)!;
+    const { players, playerID, turn } = useContext(GameApiContext)!;
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -44,6 +44,11 @@ export default function GameChat({ worldHistory, actionHistory, submitWorld, sub
 
     return (
         <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 mt-20 md:mt-0 md:ml-64">
+
+          {/* Turn Counter */}
+          <div className="absolute top-1 right-1 bg-[#b6925b] text-white text-sm font-bold p-1 rounded-md border-2 border-[#e3c779]">
+            Turn: {turn}
+          </div>
 
           {/* ACTION WINDOW */}
           <div className="max-w-6xl w-full mb-6 flex flex-col mt-10">

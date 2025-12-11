@@ -28,6 +28,7 @@ interface GameApiContextType {
   worldHistory: Message[];
   actionHistory: Message[];
   narratorIsThinking: boolean;
+  turn: number;
 }
 
 export const GameApiContext = createContext<GameApiContextType | undefined>(
@@ -41,6 +42,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [gender, setGender] = useState<string | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [turn, setTurn] = useState(0);
 
   const [worldHistory, setWorldHistory] = useState<Message[]>([]);
   const [actionHistory, setActionHistory] = useState<Message[]>([]);
@@ -51,9 +53,27 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchPlayers();
-    const interval = setInterval(fetchPlayers, 1000); // Poll every 1 seconds
+    fetchTurn();
+    const interval = setInterval(() => {
+      fetchPlayers();
+      fetchTurn();
+    }, 1000); // Poll every 1 seconds
     return () => clearInterval(interval);
   }, []);
+
+  const fetchTurn = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/turn");
+      if (res.ok) {
+        const data = await res.json();
+        setTurn(data.turn);
+      } else {
+        console.error("Failed to fetch turn");
+      }
+    } catch (error) {
+      console.error("Error fetching turn:", error);
+    }
+  };
 
   const fetchPlayers = async () => {
     try {
@@ -273,6 +293,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         worldHistory,
         actionHistory,
         narratorIsThinking,
+        turn,
       }}
     >
       {children}

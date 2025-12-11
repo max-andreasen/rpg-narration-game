@@ -161,6 +161,9 @@ async def players():
     players = game_session.get_players()
     return {"players": players}
 
+@app.get("/turn")
+async def turn():
+    return {"turn": game_session.turn}
 
 @app.post("/join")
 async def join(request: JoinRequest):
