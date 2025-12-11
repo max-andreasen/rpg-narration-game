@@ -13,7 +13,7 @@ export default function GameController() {
     if (!api) throw new Error("GameApiContext not provided");
     const router = useRouter();
     
-    const { worldHistory, actionHistory, sendMessage } = api;
+    const { worldHistory, actionHistory, sendMessage, players } = api;
 
     const [worldChat, setWorldChat] = useState("");
     const [actionChat, setActionChat] = useState("");
@@ -81,8 +81,7 @@ export default function GameController() {
             submitWorld={submitWorld}
             submitAction={submitAction}
             resetGame={resetGame}
-            race={api.race}
-            gender={api.gender}
+            players={players}
             worldChat={worldChat}
             actionChat={actionChat}
             setWorldChat={setWorldChat}

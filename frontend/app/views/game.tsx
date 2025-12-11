@@ -3,11 +3,7 @@
 import Image from "next/image";
 import { PlayersView } from "./PlayersView";
 import GameChat from "./GameChat";
-
-type Message = {
-  sender: "player" | "narrator";
-  message: string;
-};
+import { Message, Player } from "../types";
 
 interface Props {
   worldHistory: Message[];
@@ -15,8 +11,7 @@ interface Props {
   submitWorld: (msg: string) => void;
   submitAction: (msg: string) => void;
   resetGame: () => void;
-  race: string | null;
-  gender: string | null;
+  players: Record<string, Player>;
   worldChat: string;
   actionChat: string;
   setWorldChat: (msg: string) => void;
@@ -31,8 +26,7 @@ export default function GameView({
   submitWorld,
   submitAction,
   resetGame,
-  race,
-  gender,
+  players,
   worldChat,
   actionChat,
   setWorldChat,
@@ -72,8 +66,7 @@ export default function GameView({
             actionHistory={actionHistory}
             submitWorld={submitWorld}
             submitAction={submitAction}
-            race={race}
-            gender={gender}
+            players={players}
             worldChat={worldChat}
             actionChat={actionChat}
             setWorldChat={setWorldChat}

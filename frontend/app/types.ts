@@ -16,3 +16,11 @@ export interface Player {
   gender: string;
 }
 
+export type Message = {
+  sender: string; // player id or "narrator"
+  message: string;
+  race: string | null;
+  gender: string | null;
+  name: string | null;
+  createdAt?: number;
+};

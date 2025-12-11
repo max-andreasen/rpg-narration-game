@@ -28,7 +28,7 @@ from models.world_model import WorldModel
 from models.state import run_state_management
 
 # Importing schemas / models.
-from schemas import PlayerMessage, JoinRequest, PlayerCreate
+from schemas import PlayerMessage, JoinRequest, PlayerCreate, WebsocketDataPacket
 
 app = FastAPI()
 
@@ -77,13 +77,12 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=1003)
         return
     await ws_manager.connect(player_id, websocket)
-    await ws_manager.private_message(
-        player_id,
-        json.dumps({
-            "type": "world", # should be system when implemented in frontend
-            "message": f"Player {player_id} connected successfully!"
-        })
-    )
+    data_packet: WebsocketDataPacket = { # check schema for WebsocketDataPacket
+        "sender": "system",
+        "type": "system",
+        "message": f"Player {player_id} connected successfully!"
+    }
+    await ws_manager.private_message(player_id, data_packet)
     # The websocket session
     try:
         while True:
@@ -103,37 +102,36 @@ async def websocket_endpoint(websocket: WebSocket):
             # Sends data to LLMs
             if data_type == "world":
                 narrator_message = "Nice question! I need to route this to an LLM that can answer this question."
+                data_packet: WebsocketDataPacket = { 
+                    "sender": "narrator",
+                    "type": "world",
+                    "message": narrator_message
+                }
                 await ws_manager.private_message(
                     player_id,
-                    json.dumps({
-                        "sender": "narrator",
-                        "type": "world",
-                        "message": narrator_message
-                    })
+                    data_packet
                 )
             # Handles when player 
             elif data_type == "action":
                 all_messages = game_session.add_message(data_sender_id, data_message)
-                await ws_manager.broadcast_message(
-                    json.dumps({
-                        "sender": data_sender_id,
-                        "type": "action",
-                        "message": data_message,
-                    })
-                )
+                data_packet: WebsocketDataPacket = {
+                    "sender": data_sender_id,
+                    "type": "action",
+                    "message": data_message,
+                }
+                await ws_manager.broadcast_message(data_packet)
                 if all_messages: 
                     # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
                     
                     narrator_message = narrator.generate("session_1", {"player_messages": all_messages})
                     run_state_management() # updates the game state based on the actions taken by players
                     game_session.new_turn()
-                    await ws_manager.broadcast_message(
-                        json.dumps({
-                            "sender": "narrator",
-                            "type": "narration",
-                            "message": narrator_message
-                        })
-                    )
+                    data_packet = {
+                        "sender": "narrator",
+                        "type": "narration",
+                        "message": narrator_message
+                    }
+                    await ws_manager.broadcast_message(data_packet)
             else:                     
                 # Sends response back to the client
                 await ws_manager.private_message(
@@ -145,10 +143,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     })
                 )
 
+    except WebSocketDisconnect as e:
+        print("WebSocket disconnected:", e)
+        await ws_manager.disconnect(player_id)
     except Exception as e:
         print("Error occured: ", e)
         await ws_manager.disconnect(player_id)
-        await websocket.close(code=1011)
+        try:
+            await websocket.close(code=1011)
+        except RuntimeError:
+            # Socket might already be closed; ignore double-close errors
+            pass
 
 
 @app.get("/")
