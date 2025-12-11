@@ -31,7 +31,7 @@ export function PlayersView() {
           </li>
         )}
         {otherPlayers.map((player) => (
-          <li key={player.id} className="flex items-center mb-2">
+          <li key={player.pid} className="flex items-center mb-2">
             <Image
               src={getSpritePath(player.race, player.gender)}
               alt={`${player.race} ${player.gender}`}

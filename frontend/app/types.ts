@@ -14,5 +14,6 @@ export interface Player {
   name: string;
   race: string;
   gender: string;
+  status: "waiting" | "action_submitted" | "narrator_thinking";
 }
 

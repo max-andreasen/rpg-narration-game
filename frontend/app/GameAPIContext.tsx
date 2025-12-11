@@ -6,6 +6,7 @@ import { Gender, Race, Player } from "./types";
 type Message = {
   sender: "player" | "narrator";
   message: string;
+  status?: "loading";
 };
 
 interface GameApiContextType {
@@ -26,6 +27,7 @@ interface GameApiContextType {
 
   worldHistory: Message[];
   actionHistory: Message[];
+  narratorIsThinking: boolean;
 }
 
 export const GameApiContext = createContext<GameApiContextType | undefined>(
@@ -43,22 +45,28 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [worldHistory, setWorldHistory] = useState<Message[]>([]);
   const [actionHistory, setActionHistory] = useState<Message[]>([]);
   const [systemHistory, setSystemHistory] = useState<string[]>([]); // will be used later to implement system messages, such as "player joined game".
+  const [narratorIsThinking, setNarratorIsThinking] = useState(false);
 
   const [actionAvailable, setActionAvailable] = useState(false); // can only make one action each turn
 
   useEffect(() => {
     fetchPlayers();
-    const interval = setInterval(fetchPlayers, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchPlayers, 1000); // Poll every 1 seconds
     return () => clearInterval(interval);
   }, []);
 
   const fetchPlayers = async () => {
     try {
       const res = await fetch("http://localhost:8000/players");
-      console.log("Fetched player:", res);
       if (res.ok) {
         const data = await res.json();
+        const players = Object.values(data.players) as Player[];
         setPlayers(data.players);
+        if (players.every((p) => p.status === "narrator_thinking")) {
+          setNarratorIsThinking(true);
+        } else {
+          setNarratorIsThinking(false);
+        }
       } else {
         console.error("Failed to fetch players");
       }
@@ -178,7 +186,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    socket.onerror = (err) => console.error("WebSocket error:", err);
+    socket.onerror = (event) => console.error("WebSocket error:", event);
 
     setWs(socket);
     console.log("Connected successfully to websocket.");
@@ -215,11 +223,30 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       return updated;
     });
   };
+  useEffect(() => {
+    if (narratorIsThinking) {
+      const loadingMessage: Message = {
+        sender: "narrator",
+        message: "",
+        status: "loading",
+      };
+      setActionHistory((prev) => [...prev, loadingMessage]);
+    }
+  }, [narratorIsThinking]);
+
   const addActionMessage = (msg: Message) => {
     setActionHistory((prev) => {
-      const updated = [...prev, msg];
-      localStorage.setItem("actionHistory", JSON.stringify(updated));
-      return updated;
+      const newHistory = [...prev];
+      const loadingIndex = newHistory.findIndex(
+        (m) => m.status === "loading"
+      );
+      if (loadingIndex !== -1) {
+        newHistory[loadingIndex] = msg;
+      } else {
+        newHistory.push(msg);
+      }
+      localStorage.setItem("actionHistory", JSON.stringify(newHistory));
+      return newHistory;
     });
   };
 
@@ -245,6 +272,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         sendMessage,
         worldHistory,
         actionHistory,
+        narratorIsThinking,
       }}
     >
       {children}

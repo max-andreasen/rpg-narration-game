@@ -13,10 +13,11 @@ export default function GameController() {
     if (!api) throw new Error("GameApiContext not provided");
     const router = useRouter();
     
-    const { worldHistory, actionHistory, sendMessage } = api;
+    const { worldHistory, actionHistory, sendMessage, narratorIsThinking } = api;
 
     const [worldChat, setWorldChat] = useState("");
     const [actionChat, setActionChat] = useState("");
+
 
     const onSubmitWorld = (e: any) => {
         e.preventDefault();

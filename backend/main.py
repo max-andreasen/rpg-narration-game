@@ -12,6 +12,7 @@ the other model (state_management.py) which handles the states.
 
 from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
+import asyncio
 from session import game_session
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -118,10 +119,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 all_messages = game_session.add_message(data_sender_id, data_message)
                 if all_messages: 
                     # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
-                    
+                    game_session.set_all_players_status("narrator_thinking")
+                    await asyncio.sleep(1) # Give frontend time to update
                     narrator_message = narrator.generate("session_1", {"player_messages": all_messages})
                     run_state_management() # updates the game state based on the actions taken by players
                     game_session.new_turn()
+                    game_session.set_all_players_status("waiting")
                     await ws_manager.broadcast_message(
                         json.dumps({
                             "type": "action",

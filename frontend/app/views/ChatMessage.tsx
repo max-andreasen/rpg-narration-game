@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import NarratorLoading from "./NarratorLoading";
 
 interface ChatMessageProps {
   message: string;
   sender: "player" | "narrator";
   race?: string | null;
   gender?: string | null;
+  status?: "loading";
 }
 
 const RACES_PREFIX_MAP: { [key: string]: string } = {
@@ -20,6 +22,7 @@ export default function ChatMessage({
   sender,
   race,
   gender,
+  status,
 }: ChatMessageProps) {
   const isPlayer = sender === "player";
 
@@ -35,6 +38,10 @@ export default function ChatMessage({
 
   const portraitSrc = getPortraitSrc();
   const altText = isPlayer ? `${race} ${gender}` : "Narrator";
+
+  if (status === "loading") {
+    return <NarratorLoading />;
+  }
 
   return (
     <div className={`flex items-start gap-3 ${isPlayer ? "justify-end" : ""}`}>
@@ -68,3 +75,4 @@ export default function ChatMessage({
     </div>
   );
 }
+

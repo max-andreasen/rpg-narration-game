@@ -16,9 +16,17 @@ class GameSession:
         
     def add_player(self, name: str, race: str, gender: str): 
         pid = self._generate_player_id()
-        player_object = {"name": name, "race": race, "gender": gender}
+        player_object = {"name": name, "race": race, "gender": gender, "status": "waiting"}
         self.players[pid] = player_object
         return pid
+
+    def set_player_status(self, pid, status):
+        if pid in self.players:
+            self.players[pid]["status"] = status
+    
+    def set_all_players_status(self, status):
+        for pid in self.players:
+            self.players[pid]["status"] = status
 
     def get_players(self):
         return self.players
@@ -30,6 +38,7 @@ class GameSession:
             raise Exception("DON'T SPAM PLEASE")
 
         self.messages[pid] = message
+        self.set_player_status(pid, "action_submitted")
 
         if len(self.players) <= len(self.messages):
             return self.messages
