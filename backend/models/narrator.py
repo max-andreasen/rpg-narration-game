@@ -25,7 +25,9 @@ class Narrator:
             "and continue the story based on the provided GAME STATE context."
         )
 
-    def build_prompt(self, session_id: str, game_state: dict, world_context: str, n_turns: int):
+    def build_prompt(
+        self, session_id: str, game_state: dict, world_context: str, n_turns: int
+    ):
         messages = []
 
         # System prompt
@@ -35,7 +37,7 @@ class Narrator:
         if world_context:
             messages.append(SystemMessage(content=f"WORLD CONTEXT:\n{world_context}"))
             # this is where we say what the world looks like, items, NPCs etc.
-        
+
         if game_state:
             messages.append(SystemMessage(content=f"GAME STATE:\n{game_state}"))
 
@@ -70,7 +72,7 @@ class Narrator:
                 session_id=session_id,
                 turn_index=next_turn_idx,
                 narration=content,
-                player_prompts=game_state.get("player_messages", {})
+                player_prompts=game_state.get("player_messages", {}),
             )
             print(f"Turn {next_turn_idx} saved in DB.")
 

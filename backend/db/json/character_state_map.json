@@ -35,6 +35,48 @@
       "location": "obsidianTower",
       "health": 200,
       "evilness": 100
+    },
+    "WanderingTrader": {
+      "description": "A charismatic merchant with a cart full of curiosities. He speaks fast and loves gold. He is currently shouting about a high-quality rope he has for sale.",
+      "location": "merchantCrossroads",
+      "health": 60,
+      "evilness": 15
+    },
+    "Pickpocket": {
+      "description": "A shadowy figure lurking behind the stalls, waiting for a distracted traveler to steal from.",
+      "location": "merchantCrossroads",
+      "health": 40,
+      "evilness": 65
+    },
+    "Fisherman": {
+      "description": "A silent, weathered old man staring endlessly into the foggy waters. He knows the legends of the lake but rarely speaks.",
+      "location": "mistyLake",
+      "health": 55,
+      "evilness": 0
+    },
+    "WaterSpirit": {
+      "description": "A translucent entity formed from the mist and water. It guards the island in the lake and lashes out at those who disturb the peace.",
+      "location": "mistyLake",
+      "health": 90,
+      "evilness": 40
+    },
+    "SkeletonWarrior": {
+      "description": "An animated pile of bones wearing rusted armor. It mindlessly attacks anything living that enters the crypt.",
+      "location": "forgottenCrypt",
+      "health": 65,
+      "evilness": 100
+    },
+    "Ghost": {
+      "description": "A sorrowful phantom that drifts through walls. Its touch freezes the blood, and it wails for its lost life.",
+      "location": "forgottenCrypt",
+      "health": 45,
+      "evilness": 80
+    },
+    "CrystalGolem": {
+      "description": "A massive construct made of living rock and pulsing blue crystals. It stands perfectly still until someone tries to take the gems.",
+      "location": "crystalCavern",
+      "health": 150,
+      "evilness": 10
     }
   }
 }

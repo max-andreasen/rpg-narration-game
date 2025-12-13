@@ -12,17 +12,17 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
 
 
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 load_dotenv(find_dotenv())
-OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DATA_PATH = os.path.join(BASE_DIR, "backend/db/RAG/text")
-DB_DIR   = os.path.join(BASE_DIR, "backend/db/RAG/vec_DB")
+DB_DIR = os.path.join(BASE_DIR, "backend/db/RAG/vec_DB")
+
 
 # LOAD + CHUNK
 def load_and_chunk():
     docs = []
-    
+
     # Iterate over all files in the folder
     for file_path in glob.glob(os.path.join(DATA_PATH, "*")):
         ext = file_path.lower()
@@ -34,16 +34,13 @@ def load_and_chunk():
         else:
             print(f"Skipping unsupported file: {file_path}")
             continue
-        
+
         docs.extend(loader.load())
-    
+
     # 2. Chunk them
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=150
-    )
+    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
     print(splitter)
-    
+
     return splitter.split_documents(docs)
 
 
@@ -58,29 +55,25 @@ def init_vectorstore():  # vectorizes our embeddings
         return not os.path.exists(sqlite_file) or os.path.getsize(sqlite_file) == 0
 
     emb = OpenAIEmbeddings(api_key=OPENAI_API_KEY)
-    
+
     if db_is_empty(DB_DIR) is False:
         # Load existing DB (no re-embedding)
-        return Chroma(
-            persist_directory=DB_DIR,
-            embedding_function=emb
-        )
-    
+        return Chroma(persist_directory=DB_DIR, embedding_function=emb)
+
     # First-time: create DB
     print("first time creating the vec store")
     chunks = load_and_chunk()
     db = Chroma.from_documents(
-        documents=chunks,
-        embedding=emb,
-        persist_directory=DB_DIR
+        documents=chunks, embedding=emb, persist_directory=DB_DIR
     )
-    
+
     return db
 
 
 # Initialize
 db = init_vectorstore()
-retriever = db.as_retriever(search_kwargs={"k": 1}) # how much to retrive
+retriever = db.as_retriever(search_kwargs={"k": 2})  # how much to retrive
+
 
 # Format documents for the prompt
 def format_docs(docs):
@@ -91,10 +84,12 @@ def format_docs(docs):
     )
 
 
-# This is what will be used! 
-def ask(query: str) -> str: 
-    """Simple call for external modules (like narrator)."""
+# This is what will be used!
+def ask(query: str) -> str:
     docs = retriever.invoke(query)
-    return docs
+    if not docs:
+        return ""  # Nessuna info trovata
+    return format_docs(docs)
 
-#print(ask("i love dragons"))
+
+# print(ask("i love dragons"))
