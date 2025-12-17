@@ -13,32 +13,22 @@ export default function GameController() {
     if (!api) throw new Error("GameApiContext not provided");
     const router = useRouter();
     
-    const { worldHistory, actionHistory, sendMessage, players } = api;
+    const { chatHistory, sendMessage, players, narratorIsThinking } = api;
 
-    const [worldChat, setWorldChat] = useState("");
-    const [actionChat, setActionChat] = useState("");
+    // This means we already have all data needed here in the Controller, no need to check the form event data, we 
+    // can just use the chatState to see what the user has inputted. 
+    const [chatState, setChatState] = useState(""); 
 
-    const onSubmitWorld = (e: any) => {
+    // When player hits 'act' button in chat interface
+    const onSubmitPlayerMessage = (e: any) => {
         e.preventDefault();
-        if (!worldChat.trim()) return;
-        submitWorld(worldChat);
-        setWorldChat("");
+        if (!chatState.trim()) return;
+        submitPlayerMessage(chatState);
+        setChatState("");
     };
 
-    const onSubmitAction = (e: any) => {
-        e.preventDefault();
-        if (!actionChat.trim()) return;
-        submitAction(actionChat);
-        setActionChat("");
-    };
-
-    // Client just sends messages. The websocket connection automatically handles responses. 
-    const submitWorld = async (worldChat: string) => {
-        if (!worldChat.trim()) return; // nothing inputted
-        sendMessage("world", worldChat);
-    };
-
-    const submitAction = async (actionChat: string) => {
+    // Uses API to handle the message in history and to send to backend. 
+    const submitPlayerMessage = async (actionChat: string) => {
         if (!actionChat.trim()) return;
         sendMessage("action", actionChat);
     };
@@ -67,7 +57,6 @@ export default function GameController() {
             const success: boolean = api.reconnect();
             if (!success) {
                 router.push("/"); // if reconnecting fails, route back to home page
-                // TODO: When having lobby, route to lobby instead?
                 return;
             } 
             if (success) console.log(`Player ${savedPlayerID} reconnected.`);
@@ -76,18 +65,12 @@ export default function GameController() {
 
     return (
         <GameView
-            worldHistory={worldHistory}
-            actionHistory={actionHistory}
-            submitWorld={submitWorld}
-            submitAction={submitAction}
+            chatHistory={chatHistory}
             resetGame={resetGame}
             players={players}
-            worldChat={worldChat}
-            actionChat={actionChat}
-            setWorldChat={setWorldChat}
-            setActionChat={setActionChat}
-            onSubmitWorld={onSubmitWorld}
-            onSubmitAction={onSubmitAction}
+            chatState={chatState}
+            setChatState={setChatState}
+            onSubmitPlayerMessage={onSubmitPlayerMessage}
         />
     );
 }

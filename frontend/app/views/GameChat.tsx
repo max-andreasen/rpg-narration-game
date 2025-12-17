@@ -1,93 +1,129 @@
 "use client";
-import { useEffect, useRef } from "react";
-import { Message, Player } from "../types";
-import ChatMessage from "./ChatMessage";
+
+import { useEffect, useRef, useContext } from "react";
+import { ChatMessage, Player } from "../types";
+import ChatMessageComponent from "./ChatMessageComponent";
+import useTypewriter from "../hooks/useTypewriter";
+import { GameApiContext } from "../GameAPIContext";
+import WaitingForPlayers from "./WaitingForPlayers";
 
 interface Props {
-  worldHistory: Message[]; // narrator/world messages
-  actionHistory: Message[]; // player/action messages
-  submitWorld: (msg: string) => void;
-  submitAction: (msg: string) => void;
+  chatHistory: (ChatMessage & { status?: "loading" })[];
+  chatState: string;
+  setChatState: (msg: string) => void;
   players: Record<string, Player>;
-  worldChat: string;
-  actionChat: string;
-  setWorldChat: (msg: string) => void;
-  setActionChat: (msg: string) => void;
-  onSubmitWorld: (e: any) => void;
-  onSubmitAction: (e: any) => void;
+  onSubmitPlayerMessage: (e: any) => void;
 }
 
 export default function GameChat({
-  worldHistory,
-  actionHistory,
+  chatHistory,
+  chatState,
   players,
-  worldChat,
-  actionChat,
-  setWorldChat,
-  setActionChat,
-  onSubmitAction,
+  setChatState,
+  onSubmitPlayerMessage,
 }: Props) {
-  // No timestamps available — preserve each stream's order and render
-  // worldHistory (narrator) messages as left, actionHistory (players) messages as right.
-    
-  // Combine and order histories by createdAt to keep narration after the triggering action.
-  const chatLog = [
-    ...worldHistory.map((m) => ({ ...m, side: "left" as const })),
-    ...actionHistory.map((m) => ({ ...m, side: "right" as const })),
-  ].sort((a, b) => {
-    const at = a.createdAt ?? 0;
-    const bt = b.createdAt ?? 0;
-    return at - bt;
-  });
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const { playerID, turn } = useContext(GameApiContext)!;
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const currentPlayer = playerID ? players[playerID] : null;
+  const hasPlayerActed = currentPlayer?.status === "action_submitted";
 
-  // Auto-scroll to bottom whenever chat arrays change (component is re-rendered when parent updates).
+  // Sort chat by timestamp
+  const chatLog = [...chatHistory].sort(
+    (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)
+  );
+
+  // Find last narrator message for typewriter
+  const lastNarratorMessage = [...chatLog]
+    .reverse()
+    .find((m) => m.sender === "narrator");
+
+  // Apply typewriter effect only to completed narrator messages, not loading placeholders
+  const displayedNarratorMessage = useTypewriter(
+    lastNarratorMessage?.status !== "loading" && lastNarratorMessage?.message
+      ? lastNarratorMessage.message
+      : "",
+    10
+  );
+
+  // Waiting for narrator if player acted and narrator hasn't finished
+  const isWaitingForNarrator =
+    hasPlayerActed &&
+    lastNarratorMessage?.status === "loading";
+
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // small timeout to wait for DOM update
-    requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    });
-  }, [worldHistory.length, actionHistory.length]);
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [chatLog, displayedNarratorMessage]);
 
   return (
     <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 mt-20 md:mt-0 md:ml-64">
+      {/* Turn Counter */}
+      <div className="absolute top-1 right-1 bg-[#b6925b] text-white text-sm font-bold p-1 rounded-md border-2 border-[#e3c779]">
+        Turn: {turn}
+      </div>
+
+      {/* CHAT WINDOW */}
       <div className="max-w-6xl w-full mb-6 flex flex-col mt-10">
         <div
-          ref={scrollRef}
+          ref={chatContainerRef}
           className="flex-grow h-96 md:h-128 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2"
         >
-          {chatLog.map((msg, idx) => (
-            <div
-              key={idx}
-              className={msg.side === "left" ? "flex justify-start" : "flex justify-end"}
-            >
-              <ChatMessage
-                message={msg.message}
-                sender={msg.sender}
-                name={
-                  msg.name ??
-                  (msg.sender === "narrator" ? "Narrator" : players[msg.sender]?.name)
+          {chatLog.map((msg, idx) => {
+            const isLastNarratorMessage = msg === lastNarratorMessage;
+
+            return (
+              <div
+                key={idx}
+                className={
+                  msg.sender === "narrator"
+                    ? "flex justify-start"
+                    : "flex justify-end"
                 }
-                race={msg.race ?? players[msg.sender]?.race ?? null}
-                gender={msg.gender ?? players[msg.sender]?.gender ?? null}
-              />
-            </div>
-          ))}
+              >
+                <ChatMessageComponent
+                  message={
+                    isLastNarratorMessage && msg.status !== "loading"
+                      ? displayedNarratorMessage
+                      : msg.message
+                  }
+                  sender={msg.sender}
+                  name={
+                    msg.sender === "narrator"
+                      ? "Narrator"
+                      : players[msg.sender]?.name
+                  }
+                  race={players[msg.sender]?.race ?? null}
+                  gender={players[msg.sender]?.gender ?? null}
+                  status={msg.status}
+                />
+              </div>
+            );
+          })}
         </div>
 
-        <form onSubmit={onSubmitAction} className="flex gap-2">
-          <input
-            className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]"
-            placeholder="State your action..."
-            value={actionChat}
-            onChange={(e) => setActionChat(e.target.value)}
-          />
+        {/* INPUT */}
+        <form onSubmit={onSubmitPlayerMessage} className="flex gap-2">
+          {isWaitingForNarrator ? (
+            <div className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]">
+              <WaitingForPlayers />
+            </div>
+          ) : (
+            <input
+              className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]"
+              placeholder="State your action..."
+              value={chatState}
+              onChange={(e) => setChatState(e.target.value)}
+              disabled={hasPlayerActed}
+            />
+          )}
+
           <button
             type="submit"
             className="rounded-md border-2 border-[#e3c779] bg-[#8c5d25] px-4 py-2 text-[#f9edd3] font-semibold shadow-[0_3px_0_#5a3b1a] active:translate-y-0.5"
+            disabled={hasPlayerActed}
           >
             Act
           </button>
