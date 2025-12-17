@@ -1,13 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useState, useEffect } from "react";
-import { Gender, Race, Player } from "./types";
-
-type Message = {
-  sender: "player" | "narrator";
-  message: string;
-  status?: "loading";
-};
+import { Gender, Race, Player, Message } from "./types";
 
 interface GameApiContextType {
   connected: () => boolean;
@@ -17,13 +11,16 @@ interface GameApiContextType {
   name: string | null;
   race: string | null;
   gender: string | null;
-  players: Player[];
+  players: Record<string, Player>;
   joinGame: (data: any) => Promise<void>;
   reset: () => void;
   fetchRaces: () => Promise<Race[]>;
   fetchGenders: () => Promise<Gender[]>;
 
-  sendMessage: (type: "action" | "world" | "system", msg: string) => void;
+  sendMessage: (
+    type: "action" | "world" | "system",
+    msg: string
+  ) => Promise<void>;
 
   worldHistory: Message[];
   actionHistory: Message[];
@@ -40,16 +37,18 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [name, setName] = useState<string | null>(null);
   const [race, setRace] = useState<string | null>(null);
   const [gender, setGender] = useState<string | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Record<string, Player>>({});
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [turn, setTurn] = useState(0);
 
-  const [worldHistory, setWorldHistory] = useState<Message[]>([]);
-  const [actionHistory, setActionHistory] = useState<Message[]>([]);
-  const [systemHistory, setSystemHistory] = useState<string[]>([]); // will be used later to implement system messages, such as "player joined game".
+  // TODO: Probable could merge worldHistory and actionHistory into one state (now that we have timestamps as well)
+  const [worldHistory, setWorldHistory] = useState<Message[]>([]); // The narrator messages
+  const [actionHistory, setActionHistory] = useState<Message[]>([]); 
+  const [systemHistory, setSystemHistory] = useState<string[]>([]); // TODO: will be used later to implement system messages, such as "player joined game".
   const [narratorIsThinking, setNarratorIsThinking] = useState(false);
 
-  const [actionAvailable, setActionAvailable] = useState(false); // can only make one action each turn
+  // TODO: Make sure the player can only do one action at each turn
+  const [actionAvailable, setActionAvailable] = useState(false);
 
   useEffect(() => {
     fetchPlayers();
@@ -139,7 +138,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setWorldHistory([]);
     setActionHistory([]);
     setSystemHistory([]);
-    setPlayers([]);
+    setPlayers({});
     setWs(null);
 
     const res = await fetch("http://localhost:8000/reset");
@@ -184,7 +183,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     // TODO: Probably want to extract more info later, like which turn it is etc.
   };
 
-  // WEBSOCKET LOGIC
+  // WEBSOCKET LOGIC (backend --> frontend)
   useEffect(() => {
     if (!playerID) {
       setWs(null);
@@ -192,78 +191,131 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     }
     const socket = new WebSocket(`ws://localhost:8000/ws?player_id=${playerID}`);
 
+    // When recieving a message from the backend
     socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      const data = JSON.parse(event.data);
+      const sender = data.sender;
 
-        if (data.type === "world")
-          addWorldMessage({ sender: "narrator", message: data.message });
-        else if (data.type === "action")
-          addActionMessage({ sender: "narrator", message: data.message });
-        else console.warn("Unknown message type:", data.type);
-      } catch (err) {
-        console.error("Failed to parse WS message:", event.data, err);
+      console.log("Received message from backend:", data);
+
+      // This is due to the backend broadcasting all player actions back to all players. The backend broadcasts own message back to player, 
+      // we want to avoid displaying the message twice, so we do an early return.
+      if (sender === playerID) {
+        return;
       }
-    };
 
-    socket.onerror = (event) => console.error("WebSocket error:", event);
+      // Action message from other players
+      if (data.type === "action") {
+        let player = players[sender]; // players is state of type 'Record<string, Player>'
 
-    setWs(socket);
-    console.log("Connected successfully to websocket.");
-    return () => socket.close();
+        if (!player) {
+          console.warn("Sender not found in players list:", sender, "- refreshing players list.");
+          fetchPlayers();
+          player = players[sender];
+        }
+        // Appends the message to action history
+        addActionMessage({
+          sender, // player ID
+          message: data.message,
+          race: player?.race ?? null,
+          gender: player?.gender ?? null,
+          name: player?.name ?? null,
+          createdAt: Date.now(),
+        });
+        return;
+      }
+
+      // TODO: Add support for non-action messages here...
+
+      // Narration message from narrator
+      if (data.type === "narration") {
+        addWorldMessage({
+          sender: "narrator",
+          message: data.message,
+          race: null, 
+          gender: null,
+          name: null,
+          createdAt: Date.now()
+        });
+        return;
+      }
+  };
+
+  socket.onerror = (err) => console.error("WebSocket error:", err);
+  setWs(socket);
+  console.log("Connected successfully to websocket.");
+  return () => socket.close();
   }, [playerID]);
 
-  // CHAT LOGIC
-  const sendMessage = (type: "action" | "world" | "system", msg: string) => {
+
+  // CHAT LOGIC (frontend --> backend)
+  const sendMessage = async (type: "action" | "world" | "system", msg: string) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
+
+      // We send the message to the backend in appropriate format
       const payload = JSON.stringify({
+        type,
         pid: playerID,
-        type: type,
         message: msg,
       });
-      ws.send(payload);
-      const message: Message = { sender: "player", message: msg };
-      if (type == "world") {
-        addWorldMessage(message);
-      } else if (type == "action") {
+      await ws.send(payload);
+
+      // We append message to correct history, to display in frontend
+      const message: Message = { 
+        sender: String(playerID), 
+        message: msg,
+        race: race,
+        gender: gender,
+        name: name,
+        // TODO: status here? 
+      };
+      if (type === "action") {
         addActionMessage(message);
-      } else {
-        console.warn("Type is not valid");
+      } else if (type === "world") {
+        addWorldMessage(message);
       }
     } else {
       console.warn("WebSocket not connected yet. Message not recieved");
     }
   };
 
-  // Keeps history of chat.
+  // Adds a world (narrator) message to the state (history)
   const addWorldMessage = (msg: Message) => {
+    const stamped_msg = msg.createdAt ? msg : { ...msg, createdAt: Date.now() };
     setWorldHistory((prev) => {
-      const updated = [...prev, msg];
+      const updated = [...prev, stamped_msg];
       localStorage.setItem("worldHistory", JSON.stringify(updated));
       return updated;
     });
   };
+
   useEffect(() => {
     if (narratorIsThinking) {
       const loadingMessage: Message = {
         sender: "narrator",
         message: "",
+        race: null, 
+        gender: null,
+        name: null,
+        createdAt: Date.now(),
         status: "loading",
       };
       setActionHistory((prev) => [...prev, loadingMessage]);
     }
   }, [narratorIsThinking]);
 
+  // Appends action message to the state (history)
   const addActionMessage = (msg: Message) => {
+    const stamped_msg = msg.createdAt ? msg : { ...msg, createdAt: Date.now() };
     setActionHistory((prev) => {
       const newHistory = [...prev];
       const loadingIndex = newHistory.findIndex(
         (m) => m.status === "loading"
       );
       if (loadingIndex !== -1) {
-        newHistory[loadingIndex] = msg;
+        newHistory[loadingIndex] = stamped_msg;
       } else {
-        newHistory.push(msg);
+        newHistory.push(stamped_msg);
       }
       localStorage.setItem("actionHistory", JSON.stringify(newHistory));
       return newHistory;

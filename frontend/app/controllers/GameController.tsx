@@ -13,7 +13,7 @@ export default function GameController() {
     if (!api) throw new Error("GameApiContext not provided");
     const router = useRouter();
     
-    const { worldHistory, actionHistory, sendMessage, narratorIsThinking } = api;
+    const { worldHistory, actionHistory, sendMessage, players, narratorIsThinking } = api;
 
     const [worldChat, setWorldChat] = useState("");
     const [actionChat, setActionChat] = useState("");
@@ -68,7 +68,6 @@ export default function GameController() {
             const success: boolean = api.reconnect();
             if (!success) {
                 router.push("/"); // if reconnecting fails, route back to home page
-                // TODO: When having lobby, route to lobby instead?
                 return;
             } 
             if (success) console.log(`Player ${savedPlayerID} reconnected.`);
@@ -82,8 +81,7 @@ export default function GameController() {
             submitWorld={submitWorld}
             submitAction={submitAction}
             resetGame={resetGame}
-            race={api.race}
-            gender={api.gender}
+            players={players}
             worldChat={worldChat}
             actionChat={actionChat}
             setWorldChat={setWorldChat}

@@ -17,3 +17,14 @@ export interface Player {
   status: "waiting" | "action_submitted" | "narrator_thinking";
 }
 
+// Primarily used for frontend, e.g. what is kept in the states. 
+// This is then mapped onto the chat box.
+export type Message = {
+  sender: string; // player id (as string) or "narrator"
+  message: string; 
+  race: string | null;
+  gender: string | null;
+  name: string | null;
+  createdAt?: number; // timestamp to be able to sort messages vertically
+  status?: "loading" 
+};

@@ -25,7 +25,8 @@ export function PlayersView() {
               alt={`${me.race} ${me.gender}`}
               width={40}
               height={40}
-              className="mr-2"
+              className="mr-2 w-[40px] h-[40px]"
+              loading="eager"
             />
             <span>{me.name} (You)</span>
           </li>
@@ -37,7 +38,8 @@ export function PlayersView() {
               alt={`${player.race} ${player.gender}`}
               width={40}
               height={40}
-              className="mr-2"
+              className="mr-2 w-[40px] h-[40px]"
+              loading="eager"
             />
             <span>{player.name}</span>
           </li>
