@@ -26,6 +26,7 @@ import json
 from session import game_session
 from models.narrator import Narrator
 from models.world_model import WorldModel
+from models.router import InputRouter
 from models.state import run_state_management
 
 # Importing schemas / models.
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 async def player_action_message(payload: PlayerMessage):
     try:
@@ -78,10 +80,10 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=1003)
         return
     await ws_manager.connect(player_id, websocket)
-    data_packet: WebsocketDataPacket = { # check schema for WebsocketDataPacket
+    data_packet: WebsocketDataPacket = {  # check schema for WebsocketDataPacket
         "sender": "system",
         "type": "system",
-        "message": f"Player {player_id} connected successfully!"
+        "message": f"Player {player_id} connected successfully!",
     }
     await ws_manager.private_message(player_id, data_packet)
     # The websocket session
@@ -90,30 +92,34 @@ async def websocket_endpoint(websocket: WebSocket):
             # Waiting for client to send data
             raw_data = await websocket.receive_text()
             data = json.loads(raw_data)
-            
+
+            data_message = data.get("message")
+            data_sender_id = data.get("pid")
+
             # TODO: Refactor this into its own module that takes data as input and generates response object as output.
 
-            data_type = data.get("type") # TODO: Connect LLM that parse type here. Types from frontend should be action, question or other (maybe?)
+            router = InputRouter()
+
+            data_type = router.classify(data_message)
             data_message = data.get("message")
-            data_sender_id = data.get("pid") # the player ID sending the message
+            data_sender_id = data.get("pid")  # the player ID sending the message
 
             world_model = WorldModel()
             narrator = Narrator()
 
             # Sends data to LLMs
             if data_type == "world":
-                narrator_message = "Nice question! I need to route this to an LLM that can answer this question."
-                data_packet: WebsocketDataPacket = { 
+                print("World query detected.")
+                answer = world_model.generate(player_id, data_message)
+                data_packet: WebsocketDataPacket = {
                     "sender": "narrator",
                     "type": "world",
-                    "message": narrator_message
+                    "message": answer,
                 }
-                await ws_manager.private_message(
-                    player_id,
-                    data_packet
-                )
-            # Handles when player sends an action
+                await ws_manager.private_message(player_id, data_packet)
+            # Handles when player
             elif data_type == "action":
+                print("Action detected.")
                 all_messages = game_session.add_message(data_sender_id, data_message)
                 data_packet: WebsocketDataPacket = {
                     "sender": data_sender_id,
@@ -131,18 +137,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     data_packet = {
                         "sender": "narrator",
                         "type": "narration",
-                        "message": narrator_message
+                        "message": narrator_message,
                     }
                     await ws_manager.broadcast_message(data_packet)
-            else:                     
+            else:
                 # Sends response back to the client
                 await ws_manager.private_message(
                     player_id,
-                    json.dumps({
-                        "sender": "system",
-                        "type": "system",
-                        "message": "Something went wrong..."
-                    })
+                    json.dumps(
+                        {
+                            "sender": "system",
+                            "type": "system",
+                            "message": "Something went wrong...",
+                        }
+                    ),
                 )
 
     except WebSocketDisconnect as e:
@@ -166,6 +174,7 @@ async def root():
 @app.get("/session")
 async def get_sesssion():
     return game_session
+
 
 @app.get("/players")
 async def players():
@@ -210,8 +219,18 @@ async def join(request: JoinRequest):
 
 @app.post("/remove")
 async def remove_player(player_id):
-    # TODO: Remove player from database as well. 
     game_session.delete_player(player_id)
+
+    was_deleted = delete_player(player_id)
+
+    if not was_deleted:
+        raise HTTPException(
+            status_code=404, detail=f"Player {player_id} not found in database."
+        )
+
+    return {
+        "message": f"Player {player_id} removed successfully from session and database."
+    }
 
 
 @app.get("/reset")

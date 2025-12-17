@@ -1,0 +1,61 @@
+{
+  "quests": {
+    "q1_seek_guidance": {
+      "title": "The Elder's Wisdom",
+      "description": "Speak to the Elder in the Starting Village to learn about the spreading darkness and the Obsidian Tower.",
+      "location": "startingVillage",
+      "target_npc": "Elder",
+      "type": "interaction",
+      "is_completed": false
+    },
+    "q2_light_the_way": {
+      "title": "Into the Crypt",
+      "description": "The Obsidian Tower is pitch black. Rumors say an ancient Lantern was left in the Forgotten Crypt. Find it to pierce the darkness.",
+      "location": "forgottenCrypt",
+      "target_item": "lantern",
+      "type": "item_pickup",
+      "prerequisites": ["q1_seek_guidance"],
+      "hint": "The crypt entrance is near the village. Beware of the undead."
+    },
+    "q3_high_ground": {
+      "title": "Prepare to Climb",
+      "description": "To reach the hidden caves in the Rocky Hills, you need climbing gear. Find the Wandering Trader at the Crossroads and obtain a Sturdy Rope.",
+      "location": "merchantCrossroads",
+      "target_item": "sturdyRope",
+      "type": "item_pickup",
+      "prerequisites": ["q1_seek_guidance"],
+      "hint": "Merchants love to trade. Make sure you have something of value or gold."
+    },
+    "q4_lost_at_sea": {
+      "title": "Navigator's Tool",
+      "description": "The Enchanted Forest is a maze. Without a Compass, you will walk in circles. Search the Misty Lake for the lost compass.",
+      "location": "mistyLake",
+      "target_item": "compass",
+      "type": "item_pickup",
+      "prerequisites": ["q1_seek_guidance"],
+      "hint": "The lake is thick with fog. The compass might be on the central island."
+    },
+    "q5_unlock_the_spire": {
+      "title": "The Bone Key",
+      "description": "The gate to the Obsidian Tower is locked. The key was buried with its master in the Forgotten Crypt long ago.",
+      "location": "forgottenCrypt",
+      "target_item": "boneKey",
+      "type": "item_pickup",
+      "prerequisites": ["q2_light_the_way"],
+      "hint": "Search the deepest part of the crypt, perhaps near the Lantern."
+    },
+    "q6_confront_darkness": {
+      "title": "The Final Battle",
+      "description": "Ascend the Obsidian Tower and defeat the Dark Wizard to save the valley.",
+      "location": "obsidianTower",
+      "target_npc": "DarkWizard",
+      "type": "combat_victory",
+      "prerequisites": [
+        "q2_light_the_way",
+        "q4_lost_at_sea",
+        "q5_unlock_the_spire"
+      ],
+      "hint": "You will need the Lantern to see inside, the Compass to get through the forest, and the Key to open the door."
+    }
+  }
+}

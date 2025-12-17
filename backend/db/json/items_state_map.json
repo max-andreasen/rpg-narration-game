@@ -8,32 +8,62 @@
     },
     "healingPotion": {
       "description": "A small vial filled with a glowing, red liquid.",
-      "effect": "Restores a moderate amount of health instantly.",
+      "effect": "Restores a moderate amount of health (30 HP) instantly.",
       "location": "startingVillage",
+      "damage": 0
+    },
+    "sturdyRope": {
+      "description": "A thick coil of hemp rope, strong enough to hold the weight of a heavy warrior.",
+      "effect": "Allows climbing up the steep cliffs in **rockyHills** to reach the treasure.",
+      "location": "merchantCrossroads",
+      "damage": 0
+    },
+    "compass": {
+      "description": "A tarnished brass compass. The needle spins wildly until it settles North.",
+      "effect": "Prevents getting lost in the **enchantedForest** or **mistyLake**.",
+      "location": "mistyLake",
+      "damage": 0
+    },
+    "lantern": {
+      "description": "A rusty but functional oil lamp. The flame burns with a steady, warm glow.",
+      "effect": "Essential for seeing inside the **obsidianTower** and **rockyHills caves** without penalty.",
+      "location": "forgottenCrypt",
+      "damage": 0
+    },
+    "boneKey": {
+      "description": "An ominous key carved from a single piece of human bone.",
+      "effect": "Unlocks the heavy gates of the **obsidianTower**.",
+      "location": "forgottenCrypt",
+      "damage": 0
+    },
+    "manaCrystal": {
+      "description": "A raw chunk of crystallized magic pulsating with blue light.",
+      "effect": "Can be used to amplify spells or sold for a high price.",
+      "location": "crystalCavern",
+      "damage": 0
+    },
+    "diamond": {
+      "description": "A flawless, sparkling gem found deep underground.",
+      "effect": "Extremely valuable. Can be traded for almost anything.",
+      "location": "crystalCavern",
+      "damage": 0
+    },
+    "apple": {
+      "description": "A shiny red apple. Looks delicious.",
+      "effect": "Restores a small amount of health (5 HP).",
+      "location": "merchantCrossroads",
+      "damage": 0
+    },
+    "rawFish": {
+      "description": "A slippery, cold fish caught from the lake.",
+      "effect": "Can be cooked for food, or used to distract beasts.",
+      "location": "mistyLake",
       "damage": 0
     },
     "glowingMushroom": {
       "description": "A fungus that emits a soft, ethereal light.",
-      "effect": "Provides temporary light in dark areas. May cause slight hallucinations.",
+      "effect": "Provides weak temporary light. Eating it causes hallucinations.",
       "location": "enchantedForest",
-      "damage": 0
-    },
-    "silverKey": {
-      "description": "A delicate key made of polished silver.",
-      "effect": "Can unlock a specific door or chest.",
-      "location": "enchantedForest",
-      "damage": 0
-    },
-    "climbingGear": {
-      "description": "A set of durable ropes and sturdy metal picks.",
-      "effect": "Allows safe traversal of steep terrain and cliffs.",
-      "location": "rockyHills",
-      "damage": 0
-    },
-    "ironOre": {
-      "description": "Chunks of heavy, reddish-brown rock.",
-      "effect": "Can be smelted into useful tools or sold for coin.",
-      "location": "rockyHills",
       "damage": 0
     },
     "darkCrystal": {
@@ -47,12 +77,6 @@
       "effect": "Contains a powerful spell or forgotten knowledge.",
       "location": "obsidianTower",
       "damage": 0
-    },
-    "lantern": {
-    "description": "A sturdy, oil-filled lamp with glass panes and a metal frame.",
-    "effect": "Provides bright, sustained light, negating darkness penalties in locations like the **enchantedForest** or **obsidianTower**.",
-    "location": "startingVillage",
-    "damage": 0
-  }
+    }
   }
 }
