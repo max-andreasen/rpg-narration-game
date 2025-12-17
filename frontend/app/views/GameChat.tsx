@@ -1,69 +1,55 @@
 "use client";
 
 import { useEffect, useRef, useContext } from "react";
-import { Message, Player } from "../types";
-import ChatMessage from "./ChatMessage";
+import { ChatMessage, Player } from "../types";
+import ChatMessageComponent from "./ChatMessageComponent";
 import useTypewriter from "../hooks/useTypewriter";
 import { GameApiContext } from "../GameAPIContext";
 import WaitingForPlayers from "./WaitingForPlayers";
 
 interface Props {
-  worldHistory: Message[];
-  actionHistory: (Message & { status?: "loading" })[];
-  submitWorld: (msg: string) => void;
-  submitAction: (msg: string) => void;
-  worldChat: string;
-  actionChat: string;
+  chatHistory: (ChatMessage & { status?: "loading" })[];
+  chatState: string;
+  setChatState: (msg: string) => void;
   players: Record<string, Player>;
-  setWorldChat: (msg: string) => void;
-  setActionChat: (msg: string) => void;
-  onSubmitWorld: (e: any) => void;
-  onSubmitAction: (e: any) => void;
+  onSubmitPlayerMessage: (e: any) => void;
 }
 
 export default function GameChat({
-  worldHistory,
-  actionHistory,
-  worldChat,
-  actionChat,
+  chatHistory,
+  chatState,
   players,
-  setWorldChat,
-  setActionChat,
-  onSubmitAction,
+  setChatState,
+  onSubmitPlayerMessage,
 }: Props) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { playerID, turn } = useContext(GameApiContext)!;
 
-  const currentPlayer = players && playerID ? (players as any)[playerID] : null;
+  const currentPlayer = playerID ? players[playerID] : null;
   const hasPlayerActed = currentPlayer?.status === "action_submitted";
 
-  const lastActionMessage = actionHistory[actionHistory.length - 1];
+  // Sort chat by timestamp
+  const chatLog = [...chatHistory].sort(
+    (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)
+  );
 
+  // Find last narrator message for typewriter
+  const lastNarratorMessage = [...chatLog]
+    .reverse()
+    .find((m) => m.sender === "narrator");
+
+  // Apply typewriter effect only to completed narrator messages, not loading placeholders
   const displayedNarratorMessage = useTypewriter(
-    lastActionMessage?.sender === "narrator"
-      ? lastActionMessage?.message ?? ""
+    lastNarratorMessage?.status !== "loading" && lastNarratorMessage?.message
+      ? lastNarratorMessage.message
       : "",
     10
   );
 
-  // Waiting logic preserved from working branch
+  // Waiting for narrator if player acted and narrator hasn't finished
   const isWaitingForNarrator =
     hasPlayerActed &&
-    (
-      !lastActionMessage ||
-      lastActionMessage.sender !== "narrator" ||
-      lastActionMessage.status === "loading"
-    );
-
-  // Merge + order messages by timestamp
-  const chatLog = [
-    ...worldHistory.map((m) => ({ ...m })),
-    ...actionHistory.map((m) => ({ ...m })),
-  ].sort((a, b) => {
-    const at = a.createdAt ?? 0;
-    const bt = b.createdAt ?? 0;
-    return at - bt;
-  });
+    lastNarratorMessage?.status === "loading";
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -86,9 +72,7 @@ export default function GameChat({
           className="flex-grow h-96 md:h-128 overflow-y-auto mb-3 p-2 rounded-md border-2 border-[#b6925b] bg-[#f3e0b5]/80 text-[#3a2714] space-y-2"
         >
           {chatLog.map((msg, idx) => {
-            const isLastNarratorMessage =
-              msg.sender === "narrator" &&
-              msg === lastActionMessage;
+            const isLastNarratorMessage = msg === lastNarratorMessage;
 
             return (
               <div
@@ -99,9 +83,9 @@ export default function GameChat({
                     : "flex justify-end"
                 }
               >
-                <ChatMessage
+                <ChatMessageComponent
                   message={
-                    isLastNarratorMessage
+                    isLastNarratorMessage && msg.status !== "loading"
                       ? displayedNarratorMessage
                       : msg.message
                   }
@@ -121,7 +105,7 @@ export default function GameChat({
         </div>
 
         {/* INPUT */}
-        <form onSubmit={onSubmitAction} className="flex gap-2">
+        <form onSubmit={onSubmitPlayerMessage} className="flex gap-2">
           {isWaitingForNarrator ? (
             <div className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]">
               <WaitingForPlayers />
@@ -130,8 +114,8 @@ export default function GameChat({
             <input
               className="flex-1 rounded-md border-2 border-[#b6925b] bg-[#f9edd3] px-3 py-2 text-sm text-[#3a2714]"
               placeholder="State your action..."
-              value={actionChat}
-              onChange={(e) => setActionChat(e.target.value)}
+              value={chatState}
+              onChange={(e) => setChatState(e.target.value)}
               disabled={hasPlayerActed}
             />
           )}

@@ -19,8 +19,9 @@ export interface Player {
 
 // Primarily used for frontend, e.g. what is kept in the states. 
 // This is then mapped onto the chat box.
-export type Message = {
+export type ChatMessage = {
   sender: string; // player id (as string) or "narrator"
+   // type: "action" | "question" | "narration" // TODO: Might want to add "jibberish", or "trash" to type
   message: string; 
   race: string | null;
   gender: string | null;

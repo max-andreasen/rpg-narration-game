@@ -3,36 +3,24 @@
 import Image from "next/image";
 import { PlayersView } from "./PlayersView";
 import GameChat from "./GameChat";
-import { Message, Player } from "../types";
+import { ChatMessage, Player } from "../types";
 
 interface Props {
-  worldHistory: Message[];
-  actionHistory: Message[];
-  submitWorld: (msg: string) => void;
-  submitAction: (msg: string) => void;
+  chatHistory: ChatMessage[];
   resetGame: () => void;
   players: Record<string, Player>;
-  worldChat: string;
-  actionChat: string;
-  setWorldChat: (msg: string) => void;
-  setActionChat: (msg: string) => void;
-  onSubmitWorld: (e: any) => void;
-  onSubmitAction: (e: any) => void;
+  chatState: string; // what is being typed
+  setChatState: (msg: string) => void;
+  onSubmitPlayerMessage: (e: any) => void;
 }
 
 export default function GameView({
-  worldHistory,
-  actionHistory,
-  submitWorld,
-  submitAction,
+  chatHistory,
   resetGame,
   players,
-  worldChat,
-  actionChat,
-  setWorldChat,
-  setActionChat,
-  onSubmitWorld,
-  onSubmitAction,
+  chatState,
+  setChatState,
+  onSubmitPlayerMessage,
 }: Props) {
 
   const onResetGame = () => {
@@ -62,17 +50,11 @@ export default function GameView({
       {/* MAIN CONTENT AREA */}
       <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 px-4 md:px-0">
         <GameChat
-            worldHistory={worldHistory}
-            actionHistory={actionHistory}
-            submitWorld={submitWorld}
-            submitAction={submitAction}
+            chatHistory={chatHistory}
             players={players}
-            worldChat={worldChat}
-            actionChat={actionChat}
-            setWorldChat={setWorldChat}
-            setActionChat={setActionChat}
-            onSubmitWorld={onSubmitWorld}
-            onSubmitAction={onSubmitAction}
+            chatState={chatState}
+            setChatState={setChatState}
+            onSubmitPlayerMessage={onSubmitPlayerMessage}
         />
       </div>
     </div>

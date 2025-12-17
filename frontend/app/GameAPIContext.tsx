@@ -1,12 +1,11 @@
 "use client";
 
 import { createContext, ReactNode, useState, useEffect } from "react";
-import { Gender, Race, Player, Message } from "./types";
+import { Gender, Race, Player, ChatMessage } from "./types";
 
 interface GameApiContextType {
   connected: () => boolean;
   reconnect: () => boolean;
-
   playerID: string | null;
   name: string | null;
   race: string | null;
@@ -14,16 +13,11 @@ interface GameApiContextType {
   players: Record<string, Player>;
   joinGame: (data: any) => Promise<void>;
   reset: () => void;
-  fetchRaces: () => Promise<Race[]>;
-  fetchGenders: () => Promise<Gender[]>;
-
   sendMessage: (
     type: "action" | "world" | "system",
     msg: string
   ) => Promise<void>;
-
-  worldHistory: Message[];
-  actionHistory: Message[];
+  chatHistory: ChatMessage[];
   narratorIsThinking: boolean;
   turn: number;
 }
@@ -42,14 +36,15 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [turn, setTurn] = useState(0);
 
   // TODO: Probable could merge worldHistory and actionHistory into one state (now that we have timestamps as well)
-  const [worldHistory, setWorldHistory] = useState<Message[]>([]); // The narrator messages
-  const [actionHistory, setActionHistory] = useState<Message[]>([]); 
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]); // keeps an array of chat messages (check Message type)
   const [systemHistory, setSystemHistory] = useState<string[]>([]); // TODO: will be used later to implement system messages, such as "player joined game".
   const [narratorIsThinking, setNarratorIsThinking] = useState(false);
 
   // TODO: Make sure the player can only do one action at each turn
   const [actionAvailable, setActionAvailable] = useState(false);
 
+
+  // TODO: Could set up websocket here to avoid polling?
   useEffect(() => {
     fetchPlayers();
     fetchTurn();
@@ -93,18 +88,6 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching players:", error);
     }
   };
-  // Fetches data from the backend about the game.
-  const fetchRaces = async () => {
-    // TODO: Update backend to provide this (not needed for MVP)
-    const res = await fetch("/api/races");
-    return res.json();
-  };
-
-  const fetchGenders = async () => {
-    // TODO: Update backend to provide this (not needed for MVP)
-    const res = await fetch("/api/genders");
-    return res.json();
-  };
 
   // JOINING THE GAME.
   const joinGame = async (data: any) => {
@@ -135,8 +118,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setName(null);
     setRace(null);
     setGender(null);
-    setWorldHistory([]);
-    setActionHistory([]);
+    setChatHistory([]);
     setSystemHistory([]);
     setPlayers({});
     setWs(null);
@@ -166,21 +148,16 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       console.log("Recconection failed, playerID: ", playerID);
       return false; // needs to join game again with new data, since it is not stored.
     }
-    const storedActionHistory = JSON.parse(
-      localStorage.getItem("actionHistory") || "[]"
-    );
-    const storedWorldHistory = JSON.parse(
-      localStorage.getItem("worldHistory") || "[]"
+    const storedChatHistory = JSON.parse(
+      localStorage.getItem("chatHistory") || "[]"
     );
     setPlayerID(storedPlayerID); // also triggers the useEffect, which establishes a new websocket connection.
     setName(storedName);
     setRace(storedRace);
     setGender(storedGender);
-    setActionHistory(storedActionHistory);
-    setWorldHistory(storedWorldHistory);
+    setChatHistory(storedChatHistory)
     fetchPlayers();
     return true;
-    // TODO: Probably want to extract more info later, like which turn it is etc.
   };
 
   // WEBSOCKET LOGIC (backend --> frontend)
@@ -191,60 +168,61 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     }
     const socket = new WebSocket(`ws://localhost:8000/ws?player_id=${playerID}`);
 
-    // When recieving a message from the backend
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       const sender = data.sender;
 
       console.log("Received message from backend:", data);
 
-      // This is due to the backend broadcasting all player actions back to all players. The backend broadcasts own message back to player, 
-      // we want to avoid displaying the message twice, so we do an early return.
-      if (sender === playerID) {
-        return;
-      }
+      // Skip own messages
+      if (sender === playerID) return;
 
-      // Action message from other players
-      if (data.type === "action") {
-        let player = players[sender]; // players is state of type 'Record<string, Player>'
+      // TODO: Handle system messages
+      if (data.type === "system") return;
 
-        if (!player) {
-          console.warn("Sender not found in players list:", sender, "- refreshing players list.");
-          fetchPlayers();
-          player = players[sender];
-        }
-        // Appends the message to action history
-        addActionMessage({
-          sender, // player ID
-          message: data.message,
-          race: player?.race ?? null,
-          gender: player?.gender ?? null,
-          name: player?.name ?? null,
-          createdAt: Date.now(),
-        });
-        return;
-      }
+      // Base chat message, to avoid filling out the same stuff multiple times
+      const baseMessage: Partial<ChatMessage> = {
+        message: data.message,
+        name: null,
+        race: null,
+        gender: null,
+        createdAt: Date.now(),
+      };
 
-      // TODO: Add support for non-action messages here...
-
-      // Narration message from narrator
-      if (data.type === "narration") {
-        addWorldMessage({
+      if (sender === "narrator" && data.type === "narration") {
+        // Narration message
+        addChatMessage({
+          ...baseMessage,
           sender: "narrator",
-          message: data.message,
-          race: null, 
-          gender: null,
-          name: null,
-          createdAt: Date.now()
-        });
+        } as ChatMessage);
         return;
       }
-  };
 
-  socket.onerror = (err) => console.error("WebSocket error:", err);
-  setWs(socket);
-  console.log("Connected successfully to websocket.");
-  return () => socket.close();
+      // Action message from a player
+      let player = players[sender];
+      if (!player) {
+        console.warn(
+          "Sender not found in players list:",
+          sender,
+          "- refreshing players list."
+        );
+        fetchPlayers();
+        player = players[sender];
+      }
+
+      addChatMessage({
+        ...baseMessage,
+        sender,
+        name: player?.name ?? sender,
+        race: player?.race ?? null,
+        gender: player?.gender ?? null,
+      } as ChatMessage);
+    };
+
+    socket.onerror = (err) => console.error("WebSocket error:", err);
+    setWs(socket);
+    console.log("Connected successfully to websocket.");
+    return () => socket.close();
   }, [playerID]);
 
 
@@ -254,44 +232,55 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
       // We send the message to the backend in appropriate format
       const payload = JSON.stringify({
-        type,
+        type, // TODO: Eventually, we can ignore sending type of message from frotnend since backend auto-determines.
         pid: playerID,
         message: msg,
       });
       await ws.send(payload);
 
       // We append message to correct history, to display in frontend
-      const message: Message = { 
+      const message: ChatMessage = { 
         sender: String(playerID), 
         message: msg,
         race: race,
         gender: gender,
         name: name,
-        // TODO: status here? 
+        // TODO: need status here? 
       };
-      if (type === "action") {
-        addActionMessage(message);
-      } else if (type === "world") {
-        addWorldMessage(message);
-      }
+      addChatMessage(message);
     } else {
       console.warn("WebSocket not connected yet. Message not recieved");
     }
   };
 
-  // Adds a world (narrator) message to the state (history)
-  const addWorldMessage = (msg: Message) => {
-    const stamped_msg = msg.createdAt ? msg : { ...msg, createdAt: Date.now() };
-    setWorldHistory((prev) => {
-      const updated = [...prev, stamped_msg];
-      localStorage.setItem("worldHistory", JSON.stringify(updated));
+ // Appending chat messaged to chatHistory state
+  const addChatMessage = (msg: ChatMessage) => {
+    const stampedMsg = msg.createdAt ? msg : { ...msg, createdAt: Date.now() };
+
+    setChatHistory((prev) => {
+      let updated = [...prev];
+      
+      // If this is a real narrator message (not loading), replace the loading placeholder
+      if (stampedMsg.sender === "narrator" && stampedMsg.status !== "loading") {
+        // Find and replace the loading message with the real one
+        const loadingIndex = updated.findIndex((m) => m.sender === "narrator" && m.status === "loading");
+        if (loadingIndex !== -1) {
+          updated[loadingIndex] = stampedMsg;
+          localStorage.setItem("chatHistory", JSON.stringify(updated));
+          return updated;
+        }
+      }
+      
+      // Otherwise, just add the message
+      updated.push(stampedMsg);
+      localStorage.setItem("chatHistory", JSON.stringify(updated));
       return updated;
     });
   };
 
   useEffect(() => {
     if (narratorIsThinking) {
-      const loadingMessage: Message = {
+      const loadingMessage: ChatMessage = {
         sender: "narrator",
         message: "",
         race: null, 
@@ -300,32 +289,9 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         createdAt: Date.now(),
         status: "loading",
       };
-      setActionHistory((prev) => [...prev, loadingMessage]);
+      setChatHistory((prev) => [...prev, loadingMessage]);
     }
   }, [narratorIsThinking]);
-
-  // Appends action message to the state (history)
-  const addActionMessage = (msg: Message) => {
-    const stamped_msg = msg.createdAt ? msg : { ...msg, createdAt: Date.now() };
-    setActionHistory((prev) => {
-      const newHistory = [...prev];
-      const loadingIndex = newHistory.findIndex(
-        (m) => m.status === "loading"
-      );
-      if (loadingIndex !== -1) {
-        newHistory[loadingIndex] = stamped_msg;
-      } else {
-        newHistory.push(stamped_msg);
-      }
-      localStorage.setItem("actionHistory", JSON.stringify(newHistory));
-      return newHistory;
-    });
-  };
-
-  const endTurn = () => {
-    // TODO: Add additional info to localStorage
-    // localStorage only stores strings, need to stringify the lists / arrays
-  };
 
   return (
     <GameApiContext.Provider
@@ -339,11 +305,8 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         players,
         joinGame,
         reset,
-        fetchRaces,
-        fetchGenders,
         sendMessage,
-        worldHistory,
-        actionHistory,
+        chatHistory,
         narratorIsThinking,
         turn,
       }}
