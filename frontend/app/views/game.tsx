@@ -4,12 +4,14 @@ import Image from "next/image";
 import { PlayersView } from "./PlayersView";
 import GameChat from "./GameChat";
 import { ChatMessage, Player } from "../types";
+import { useState, useEffect } from "react";
 
 interface Props {
   chatHistory: ChatMessage[];
+  systemMessage: string;
   resetGame: () => void;
   players: Record<string, Player>;
-  chatState: string; // what is being typed
+  chatState: string;
   setChatState: (msg: string) => void;
   onSubmitPlayerMessage: (e: any) => void;
   hasPlayerActed: boolean;
@@ -17,13 +19,32 @@ interface Props {
 
 export default function GameView({
   chatHistory,
+  systemMessage,
   resetGame,
   players,
   chatState,
   setChatState,
   onSubmitPlayerMessage,
-  hasPlayerActed, // from GameContext state
+  hasPlayerActed,
 }: Props) {
+  const [popupMessage, setPopupMessage] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  // Show popup when systemMessage changes
+  useEffect(() => {
+    if (systemMessage) {
+      setPopupMessage(systemMessage);
+      setVisible(true);
+
+      const hideTimeout = setTimeout(() => setVisible(false), 3500); // fade out after 3.5s
+      const clearPopup = setTimeout(() => setPopupMessage(null), 4000); // remove from DOM after 4s
+
+      return () => {
+        clearTimeout(hideTimeout);
+        clearTimeout(clearPopup);
+      };
+    }
+  }, [systemMessage]);
 
   const onResetGame = () => {
     resetGame();
@@ -49,15 +70,26 @@ export default function GameView({
         className="object-cover -z-10"
       />
 
+      {/* SYSTEM MESSAGE POPUP */}
+      {popupMessage && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 bg-yellow-400 text-[#3a2714] border-2 border-[#b6925b] rounded-md px-4 py-2 shadow-lg transition-opacity duration-500 ${
+            visible ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {popupMessage}
+        </div>
+      )}
+
       {/* MAIN CONTENT AREA */}
       <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 px-4 md:px-0">
         <GameChat
-            chatHistory={chatHistory}
-            players={players}
-            chatState={chatState}
-            setChatState={setChatState}
-            onSubmitPlayerMessage={onSubmitPlayerMessage}
-            hasPlayerActed={hasPlayerActed}
+          chatHistory={chatHistory}
+          players={players}
+          chatState={chatState}
+          setChatState={setChatState}
+          onSubmitPlayerMessage={onSubmitPlayerMessage}
+          hasPlayerActed={hasPlayerActed}
         />
       </div>
     </div>
