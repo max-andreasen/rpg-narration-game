@@ -89,25 +89,20 @@ async def websocket_endpoint(websocket: WebSocket):
     # The websocket session
     try:
         while True:
-            # Waiting for client to send data
             raw_data = await websocket.receive_text()
+
             data = json.loads(raw_data)
-
-            data_message = data.get("message")
-            data_sender_id = data.get("pid")
-
-            # TODO: Refactor this into its own module that takes data as input and generates response object as output.
-
-            router = InputRouter()
-
-            data_type = router.classify(data_message)
             data_message = data.get("message")
             data_sender_id = data.get("pid")  # the player ID sending the message
 
+            # LLM determines the type of message (action, world)
+            router = InputRouter()
+            data_type = router.classify(data_message)
+            
             world_model = WorldModel()
             narrator = Narrator()
 
-            # Sends data to LLMs
+            # Handles player question / world query
             if data_type == "world":
                 print("World query detected.")
                 answer = world_model.generate(player_id, data_message)
@@ -116,8 +111,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "world",
                     "message": answer,
                 }
-                await ws_manager.private_message(player_id, data_packet)
-            # Handles when player
+                await ws_manager.private_message(player_id, data_packet) # sends resonse ONLY to asking player
+
+            # Handles player action
             elif data_type == "action":
                 print("Action detected.")
                 all_messages = game_session.add_message(data_sender_id, data_message)
@@ -126,14 +122,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "action",
                     "message": data_message,
                 }
-                await ws_manager.broadcast_message(data_packet) # broadcasts the player action to all players
+                await ws_manager.broadcast_message(data_packet) # broadcasts the player action to ALL players
                 if all_messages: # If all players has sent an action message
                     game_session.set_all_players_status("narrator_thinking")
                     await asyncio.sleep(1) # Give frontend time to update
                     narrator_message = narrator.generate("session_1", {"player_messages": all_messages}) # TODO: Fix so this is correctly formatted
                     run_state_management() # updates the game state based on the actions taken by players
                     game_session.new_turn()
-                    game_session.set_all_players_status("waiting") # 
+                    game_session.set_all_players_status("waiting") 
                     data_packet = {
                         "sender": "narrator",
                         "type": "narration",
@@ -141,17 +137,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     }
                     await ws_manager.broadcast_message(data_packet)
             else:
-                # Sends response back to the client
-                await ws_manager.private_message(
-                    player_id,
-                    json.dumps(
-                        {
-                            "sender": "system",
-                            "type": "system",
-                            "message": "Something went wrong...",
-                        }
-                    ),
-                )
+                data_packet: WebsocketDataPacket = {
+                    "sender": "system",
+                    "type": "system",
+                    "message": "Something went wrong when handling response in the server...",
+                }
+                await ws_manager.private_message(player_id, data_packet)
 
     except WebSocketDisconnect as e:
         print("WebSocket disconnected:", e)
@@ -181,9 +172,11 @@ async def players():
     players = game_session.get_players()
     return {"players": players}
 
+
 @app.get("/turn")
 async def turn():
     return {"turn": game_session.turn}
+
 
 @app.post("/join")
 async def join(request: JoinRequest):
@@ -192,12 +185,10 @@ async def join(request: JoinRequest):
     race = request.race
     gender = request.gender
 
-    # req contains a JSON with the data
+    # request contains a JSON with the data
     pid = game_session.add_player(name=name, race=race, gender=gender)
 
-    print("Player assigned ID: ", pid)
-
-    new_player_data = {
+    new_player_data = { # TODO: correct type
         "id": pid,
         "name": name,
         "race": race,
