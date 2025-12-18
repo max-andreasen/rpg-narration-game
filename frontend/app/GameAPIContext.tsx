@@ -20,6 +20,7 @@ interface GameApiContextType {
   chatHistory: ChatMessage[];
   narratorIsThinking: boolean;
   turn: number;
+  hasPlayerActed: boolean;
 }
 
 export const GameApiContext = createContext<GameApiContextType | undefined>(
@@ -40,8 +41,9 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [systemHistory, setSystemHistory] = useState<string[]>([]); // TODO: will be used later to implement system messages, such as "player joined game".
   const [narratorIsThinking, setNarratorIsThinking] = useState(false);
 
-  // TODO: Make sure the player can only do one action at each turn
-  const [actionAvailable, setActionAvailable] = useState(false);
+  // Same info also in Player object from backend (status property)
+  // We model it here in this state as well for instant UI changes
+  const [hasPlayerActed, setHasPlayerActed] = useState(false);
 
 
   // TODO: Could set up websocket here to avoid polling?
@@ -69,6 +71,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     }
   };
 
+
   const fetchPlayers = async () => {
     try {
       const res = await fetch("http://localhost:8000/players");
@@ -88,6 +91,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching players:", error);
     }
   };
+
 
   // JOINING THE GAME.
   const joinGame = async (data: any) => {
@@ -112,6 +116,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     fetchPlayers();
   };
 
+
   const reset = async () => {
     // Reset the local states
     setPlayerID(null);
@@ -133,12 +138,12 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     console.error("Something went wrong when resetting the game session");
   };
 
+
   // RECONNECTION LOGIC
   // Returns true if the websocket is connected and playerID exists
   const connected = (): boolean => {
     return ws !== null && ws.readyState === WebSocket.OPEN && playerID !== null;
   };
-
   const reconnect = (): boolean => {
     const storedPlayerID = localStorage.getItem("playerID");
     const storedName = localStorage.getItem("name");
@@ -160,6 +165,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+
   // WEBSOCKET LOGIC (backend --> frontend)
   useEffect(() => {
     if (!playerID) {
@@ -174,8 +180,12 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
       console.log("Received message from backend:", data);
 
-      // Skip own messages
-      if (sender === playerID) return;
+      // When own message reflected back --> action taken 
+      //  --> cannot send another action this turn
+      if (sender === playerID) {
+        setHasPlayerActed(true);
+        return;
+      }
 
       // TODO: Handle system messages
       if (data.type === "system") return;
@@ -189,11 +199,24 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         createdAt: Date.now(),
       };
 
+      // Narration message
       if (sender === "narrator" && data.type === "narration") {
-        // Narration message
+        // Narration --> new turn --> Unlock all player's chat boxes / actions again
+        setHasPlayerActed(false);
         addChatMessage({
           ...baseMessage,
           sender: "narrator",
+          type: "narration",
+        } as ChatMessage);
+        return;
+      }
+
+      // World message (answer to question)
+      if (sender === "narrator" && data.type === "world") {
+        addChatMessage({
+          ...baseMessage,
+          sender: "narrator",
+          type: "world",
         } as ChatMessage);
         return;
       }
@@ -209,7 +232,6 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         fetchPlayers();
         player = players[sender];
       }
-
       addChatMessage({
         ...baseMessage,
         sender,
@@ -309,6 +331,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         chatHistory,
         narratorIsThinking,
         turn,
+        hasPlayerActed, 
       }}
     >
       {children}

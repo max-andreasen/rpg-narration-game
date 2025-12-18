@@ -27,5 +27,6 @@ export type ChatMessage = {
   gender: string | null;
   name: string | null;
   createdAt?: number; // timestamp to be able to sort messages vertically
-  status?: "loading" 
+  status?: "loading";
+  type?: "narration" | "world";
 };

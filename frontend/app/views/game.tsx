@@ -12,6 +12,7 @@ interface Props {
   chatState: string; // what is being typed
   setChatState: (msg: string) => void;
   onSubmitPlayerMessage: (e: any) => void;
+  hasPlayerActed: boolean;
 }
 
 export default function GameView({
@@ -21,6 +22,7 @@ export default function GameView({
   chatState,
   setChatState,
   onSubmitPlayerMessage,
+  hasPlayerActed, // from GameContext state
 }: Props) {
 
   const onResetGame = () => {
@@ -55,6 +57,7 @@ export default function GameView({
             chatState={chatState}
             setChatState={setChatState}
             onSubmitPlayerMessage={onSubmitPlayerMessage}
+            hasPlayerActed={hasPlayerActed}
         />
       </div>
     </div>
