@@ -18,6 +18,7 @@ interface GameApiContextType {
     msg: string
   ) => Promise<void>;
   chatHistory: ChatMessage[];
+  systemMessage: String;
   narratorIsThinking: boolean;
   turn: number;
   hasPlayerActed: boolean;
@@ -38,7 +39,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   // TODO: Probable could merge worldHistory and actionHistory into one state (now that we have timestamps as well)
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]); // keeps an array of chat messages (check Message type)
-  const [systemHistory, setSystemHistory] = useState<string[]>([]); // TODO: will be used later to implement system messages, such as "player joined game".
+  const [systemMessage, setSystemMessage] = useState<string>(""); // auto-clears after a time-out (e.g. 5s)
   const [narratorIsThinking, setNarratorIsThinking] = useState(false);
 
   // Same info also in Player object from backend (status property)
@@ -124,7 +125,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setRace(null);
     setGender(null);
     setChatHistory([]);
-    setSystemHistory([]);
+    setSystemMessage("");
     setPlayers({});
     setWs(null);
 
@@ -187,8 +188,11 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // TODO: Handle system messages
-      if (data.type === "system") return;
+      if (data.type === "system") {
+        setSystemMessage(data.message);
+        setTimeout(() => setSystemMessage(""), 5000); // auto-hide after 5s
+        return;
+      }
 
       // Base chat message, to avoid filling out the same stuff multiple times
       const baseMessage: Partial<ChatMessage> = {
@@ -329,6 +333,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         reset,
         sendMessage,
         chatHistory,
+        systemMessage,
         narratorIsThinking,
         turn,
         hasPlayerActed, 

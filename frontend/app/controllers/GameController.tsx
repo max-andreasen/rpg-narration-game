@@ -13,7 +13,7 @@ export default function GameController() {
     if (!api) throw new Error("GameApiContext not provided");
     const router = useRouter();
     
-    const { chatHistory, sendMessage, players, hasPlayerActed } = api;
+    const { chatHistory, systemMessage, sendMessage, players, hasPlayerActed } = api;
 
     // This means we already have all data needed here in the Controller, no need to check the form event data, we 
     // can just use the chatState to see what the user has inputted. 
@@ -66,6 +66,7 @@ export default function GameController() {
     return (
         <GameView
             chatHistory={chatHistory}
+            systemMessage={systemMessage}
             resetGame={resetGame}
             players={players}
             chatState={chatState}
