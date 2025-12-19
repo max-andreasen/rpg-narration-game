@@ -11,6 +11,7 @@ import os
 import json
 from datetime import datetime
 from collections import defaultdict
+from pathlib import Path
 
 load_dotenv()
 MONGO_URL = os.getenv("MONGO_URL")
@@ -89,11 +90,51 @@ def get_turns(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
     return list(cursor)
 
 
-# Clears EVERYTHING in the database
+# Retrieves the latest file that has been written to
+def get_latest_write_file_number():
+    folder_path = Path(__file__).parent / "saved-data"
+    max_num = 0
+    for file in folder_path.glob("data_players_*.json"):
+        num = int(file.stem.split("_")[-1])
+        if num > max_num:
+            max_num = num
+    return max_num
+
+
+def save_to_file():
+    print("Saving to file...")
+    folder_path = Path(__file__).parent / "saved-data"
+    folder_path.mkdir(parents=True, exist_ok=True)  # ensure folder exists
+    latest_write_num = get_latest_write_file_number()
+
+    file_to_write_players = folder_path / f"data_players_{latest_write_num}.json"
+    file_to_write_context = folder_path / f"data_context_{latest_write_num}.json"
+    
+    with open(file_to_write_context, "w") as f:
+        for doc in game_context_collection.find():
+            f.write(json.dumps(doc, default=str) + "\n")
+    f.close()
+    with open(file_to_write_players, "w") as f:
+        for doc in players_collection.find(): 
+            f.write(json.dumps(doc, default=str) + "\n")
+    f.close()
+    return
+        
+
+# Clears EVERYTHING in the database and sets up new write file for next session
 def clear_db():
     players_collection.drop()
     npcs_collection.drop()
     game_context_collection.drop()
+
+    next_write_num = get_latest_write_file_number() + 1
+    folder_path = Path(__file__).parent / "saved-data"
+    file_path = os.path.join(folder_path, f"data_players_{next_write_num}.json")
+    with open(file_path, "w") as f:
+        f.write("") 
+    file_path = os.path.join(folder_path, f"data_context_{next_write_num}.json")
+    with open(file_path, "w") as f:
+        f.write("") 
 
 
 def read_player_state():
