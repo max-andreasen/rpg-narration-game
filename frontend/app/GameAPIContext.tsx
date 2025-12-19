@@ -282,6 +282,18 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   }, [playerID]);
 
 
+  const saveDataToFile = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/save");
+      if (res.ok) {
+        console.log("Successfully stored data on server!");
+      }
+    } catch (error) {
+      console.error("Error when trying to save data in server, ", error);
+    }
+  }
+
+
   // CHAT LOGIC (frontend --> backend)
   const sendMessage = async (type: "action" | "world" | "system", msg: string) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -301,9 +313,9 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         race: race,
         gender: gender,
         name: name,
-        // TODO: need status here? 
       };
       addChatMessage(message);
+      saveDataToFile();
     } else {
       console.warn("WebSocket not connected yet. Message not recieved");
     }

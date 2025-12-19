@@ -136,6 +136,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": narrator_message,
                     }
                     await ws_manager.broadcast_message(data_packet)
+                    save_to_file() # saves conversation to file 
             else:
                 data_packet: WebsocketDataPacket = {
                     "sender": "system",
@@ -188,6 +189,12 @@ async def get_sesssion():
 async def players():
     players = game_session.get_players()
     return {"players": players}
+
+# Saves data in databse to a local file in the backend
+@app.get("/save")
+async def save_data():
+    save_to_file()
+    return {"message": "Data saved."}
 
 
 @app.get("/turn")
