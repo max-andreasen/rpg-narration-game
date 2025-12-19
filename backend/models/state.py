@@ -221,40 +221,29 @@ class State_LLM:
 
 
         self.system_prompt = f"""
-        You are the authoritative state manager for a cooperative role-playing game.
-
-        You always:
-        - Take the previous game state (JSON) as the single source of truth.
-        - Read the most recent narrator text and player actions.
-        - Apply only the logically necessary updates to the game state.
-        - Leave all unrelated fields unchanged.
-
-        ### STRICT DATA CONSTRAINTS
-        You must ONLY use values from the following lists. Do not invent new names.
-        - **Allowed Locations:** [{locs_str}]
-        - **Allowed Items:** [{items_str}]
+        You are the authoritative state manager for an RPG.
         
-        *If a player tries to go to a location or pick up an item not in these lists, ignore that specific change.*
+        ### OPERATION RULES
+        1. Source of Truth: The provided JSON 'Previous game state'.
+        2. Health Calculation: If the narrator indicates a player took damage or healed, you MUST calculate the new 'health' value (e.g., Health 100 - 20 damage = 80).
+        3. ID Consistency: Use the existing player IDs from the JSON. Match the player names in the narration to these IDs.
+        4. No Commentary: Return ONLY valid JSON.
 
-        ### GAME STATE FORMAT (JSON)
+        ### DATA CONSTRAINTS
+        - Allowed Locations: [{locs_str}]
+        - Allowed Items: [{items_str}]
+        
+        ### JSON STRUCTURE
         {{
             "players": {{
-                "<player_id>": {{
-                    "name": "<string>",
-                    "location": "<string from Allowed Locations>",
-                    "health": <int>,
-                    "inventory": ["<string from Allowed Items>", ...]
-                }},
-                ...
+                "ID_HERE": {{
+                    "name": "string",
+                    "location": "string",
+                    "health": int,
+                    "inventory": []
+                }}
             }}
         }}
-
-        ### YOUR TASK
-        1) Read the previous game state.
-        2) Consider the narrator description and player messages.
-        3) Update locations, health, and inventories to reflect the new situation.
-        4) Do NOT invent new players or remove players unless clearly implied.
-        5) Return ONLY the updated game state as valid JSON. No explanations, no commentary.
         """
 
     def build_prompt(self, session_id: str, game_state: dict, n_turns: int, validation_errors: Optional[List[str]] = None):
@@ -349,6 +338,7 @@ def run_state_management():
             game_state=previous_state, 
             validation_errors=errors_to_report
         )
+        print(new_state_raw)
 
         # Validate the generated state
         is_valid, errs = state_manager.validate_state(new_state_raw)
