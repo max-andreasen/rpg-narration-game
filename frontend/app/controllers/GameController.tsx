@@ -2,9 +2,9 @@
 
 import { useEffect, useContext, useState } from "react";
 import { useRouter } from "next/navigation";
-import GameView from "../views/game";
+import GameView from "../views/GameView";
 import { GameApiContext } from "../GameAPIContext";
-
+import LobbyView from "../views/LobbyView";
 
 // Should render gameview and lobby-view. And connect the logic between the lobby and the game.
 export default function GameController() {
@@ -13,11 +13,17 @@ export default function GameController() {
     if (!api) throw new Error("GameApiContext not provided");
     const router = useRouter();
     
-    const { chatHistory, systemMessage, sendMessage, players, hasPlayerActed } = api;
+    const { chatHistory, systemMessage, sendMessage, players, hasPlayerActed, startGame, hasGameStarted } = api;
 
     // This means we already have all data needed here in the Controller, no need to check the form event data, we 
     // can just use the chatState to see what the user has inputted. 
     const [chatState, setChatState] = useState(""); 
+
+
+    // When player hits 'start game' button
+    const onGameStart = () => {
+        startGame() // calls 'startGame' from API --> notifies backend that game has started --> notifies other players
+    }
 
     // When player hits 'act' button in chat interface
     const onSubmitPlayerMessage = (e: any) => {
@@ -64,15 +70,23 @@ export default function GameController() {
     }, [])
 
     return (
-        <GameView
-            chatHistory={chatHistory}
-            systemMessage={systemMessage}
-            resetGame={resetGame}
-            players={players}
-            chatState={chatState}
-            setChatState={setChatState}
-            onSubmitPlayerMessage={onSubmitPlayerMessage}
-            hasPlayerActed={hasPlayerActed}
-        />
+        <div>
+            {hasGameStarted ? (
+                <GameView
+                    chatHistory={chatHistory}
+                    systemMessage={systemMessage}
+                    resetGame={resetGame}
+                    players={players}
+                    chatState={chatState}
+                    setChatState={setChatState}
+                    onSubmitPlayerMessage={onSubmitPlayerMessage}
+                    hasPlayerActed={hasPlayerActed}
+                />
+            ) : <LobbyView 
+                    players={players}
+                    systemMessage={systemMessage}
+                    onGameStart={onGameStart}
+                />}
+        </div>
     );
 }

@@ -12,16 +12,18 @@ interface GameApiContextType {
   gender: string | null;
   players: Record<string, Player>;
   joinGame: (data: any) => Promise<void>;
+  startGame: () => void; 
   reset: () => void;
   sendMessage: (
     type: "action" | "world" | "system",
     msg: string
   ) => Promise<void>;
   chatHistory: ChatMessage[];
-  systemMessage: String;
+  systemMessage: string;
   narratorIsThinking: boolean;
   turn: number;
   hasPlayerActed: boolean;
+  hasGameStarted: boolean;
 }
 
 export const GameApiContext = createContext<GameApiContextType | undefined>(
@@ -37,7 +39,6 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [turn, setTurn] = useState(0);
 
-  // TODO: Probable could merge worldHistory and actionHistory into one state (now that we have timestamps as well)
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]); // keeps an array of chat messages (check Message type)
   const [systemMessage, setSystemMessage] = useState<string>(""); // auto-clears after a time-out (e.g. 5s)
   const [narratorIsThinking, setNarratorIsThinking] = useState(false);
@@ -45,6 +46,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   // Same info also in Player object from backend (status property)
   // We model it here in this state as well for instant UI changes
   const [hasPlayerActed, setHasPlayerActed] = useState(false);
+  const [hasGameStarted, setHasGameStarted] = useState(false); // kept in localStorage to preserve state over browser reloads
 
 
   // TODO: Could set up websocket here to avoid polling?
@@ -57,6 +59,23 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     }, 1000); // Poll every 1 seconds
     return () => clearInterval(interval);
   }, []);
+
+
+  // Sends a request to the backend to start the game --> will send websocket msg to all players
+  const startGame = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/startgame");
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Successful request to server");
+      } else {
+        console.error("Server returned falsy status: ", res.status);
+      }
+    } catch (error) {
+      console.error("Error occured when trying to reach the server...");
+    }
+  }
+
 
   const fetchTurn = async () => {
     try {
@@ -128,6 +147,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setSystemMessage("");
     setPlayers({});
     setWs(null);
+    setHasGameStarted(false);
 
     const res = await fetch("http://localhost:8000/reset");
     localStorage.clear();
@@ -150,6 +170,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     const storedName = localStorage.getItem("name");
     const storedRace = localStorage.getItem("race");
     const storedGender = localStorage.getItem("gender");
+    const gameStarted = localStorage.getItem("gameStarted") === "true";
     if (!storedPlayerID || storedPlayerID == null) {
       console.log("Recconection failed, playerID: ", playerID);
       return false; // needs to join game again with new data, since it is not stored.
@@ -161,10 +182,12 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setName(storedName);
     setRace(storedRace);
     setGender(storedGender);
-    setChatHistory(storedChatHistory)
+    setChatHistory(storedChatHistory);
+    setHasGameStarted(gameStarted);
     fetchPlayers();
     return true;
   };
+
 
 
   // WEBSOCKET LOGIC (backend --> frontend)
@@ -188,10 +211,17 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (data.type === "system") {
-        setSystemMessage(data.message);
-        setTimeout(() => setSystemMessage(""), 5000); // auto-hide after 5s
-        return;
+      if (data.sender === "system") {
+        if (data.type === "startgame") {
+          console.log("Game has started!");
+          setHasGameStarted(true);
+          localStorage.setItem("gameStarted", "true");
+          return;
+        } else {
+          setSystemMessage(data.message);
+          setTimeout(() => setSystemMessage(""), 5000); // auto-hide after 5s
+          return;
+        }
       }
 
       // Base chat message, to avoid filling out the same stuff multiple times
@@ -330,6 +360,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         gender,
         players,
         joinGame,
+        startGame,
         reset,
         sendMessage,
         chatHistory,
@@ -337,6 +368,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
         narratorIsThinking,
         turn,
         hasPlayerActed, 
+        hasGameStarted,
       }}
     >
       {children}
