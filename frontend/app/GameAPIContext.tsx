@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, ReactNode, useState, useEffect } from "react";
-import { Gender, Race, Player, ChatMessage } from "./types";
+import { Player, ChatMessage } from "./types";
 
 interface GameApiContextType {
   connected: () => boolean;
@@ -64,7 +64,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   // Sends a request to the backend to start the game --> will send websocket msg to all players
   const startGame = async () => {
     try {
-      const res = await fetch("http://localhost:8000/startgame");
+      const res = await fetch("/api/startgame");
       if (res.ok) {
         const data = await res.json();
         console.log("Successful request to server");
@@ -79,7 +79,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   const fetchTurn = async () => {
     try {
-      const res = await fetch("http://localhost:8000/turn");
+      const res = await fetch("/api/turn");
       if (res.ok) {
         const data = await res.json();
         setTurn(data.turn);
@@ -94,7 +94,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   const fetchPlayers = async () => {
     try {
-      const res = await fetch("http://localhost:8000/players");
+      const res = await fetch("/api/players");
       if (res.ok) {
         const data = await res.json();
         const players = Object.values(data.players) as Player[];
@@ -116,7 +116,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   // JOINING THE GAME.
   const joinGame = async (data: any) => {
     console.log("Joining the game...");
-    const res = await fetch("http://localhost:8000/join", {
+    const res = await fetch("/api/join", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -149,7 +149,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
     setWs(null);
     setHasGameStarted(false);
 
-    const res = await fetch("http://localhost:8000/reset");
+    const res = await fetch("/api/reset");
     localStorage.clear();
 
     if (res.status == 200) {
@@ -196,7 +196,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
       setWs(null);
       return;
     }
-    const socket = new WebSocket(`ws://localhost:8000/ws?player_id=${playerID}`);
+    const socket = new WebSocket(`/api/ws?player_id=${playerID}`);
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -284,7 +284,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
 
   const saveDataToFile = async () => {
     try {
-      const res = await fetch("http://localhost:8000/save");
+      const res = await fetch("/api/save");
       if (res.ok) {
         console.log("Successfully stored data on server!");
       }

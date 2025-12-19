@@ -1,28 +1,58 @@
 # rpg-narration-game
 
-## Set-up
-How to set up localhost
+# Set-up
+How to set up localhost for development and optionally an ngrok tunnel for exposing frontend to testers. 
 
-### Set-up client / frontend
+## Env variables
+Create a .env file in root directory. Then paste your mongodb connection URL as well as your OpenAI (or any other LLM tool credentials). 
+```
+MONGO_URL=
+OPENAI_API_KEY=
+```
+
+## Install requirements
+Run; 
+```bash
+npm i
+pip install requirements.txt
+```
+
+## Set-up client / frontend
+Run in CLI;
+```
 cd frontend
 npm run dev
+```
 
 ## Set-up backend
+Run in CLI;
+```bash
 fastapi dev ./backend/main.py
+```
 or
+```bash
 cd backend
 fastapi dev main.py
+```
 
-## The program
+## Set up ngrok
+Install ngrok on your computer and set up authentication / login. 
+The ngrok set-up guide for CLI: https://dashboard.ngrok.com/get-started/setup/windows
+
+Expose your frontend localhost with CLI command:
+```bash
+ngrok http 3000
+```
+
+Then copy the address from the "forwarding" field, which can be sent to players to connect.
+
+Make sure that the backend is up and running at localhost:8000.
+
+# The program
 How the program works, architechture etc. 
 
-### Backend
-Main.py defines the routes / endpoints, which provides information to the frontend. 
-A very basic session is kept as a class instance running locally on the backend server (currently, therefore not persistent session). 
-The session keeps track of user IDs and user messages for each turn. The user ID is returned to the client for further use. 
+## Backend
 
-The client can call the websocket endpoint to connect to the game. Using the websocket endpoint, the client receives messages directly from the server. 
 
-### Frontend 
-Hook up the client to the backend and join the session. 
-Also call the websocket endpoint to establish a websocket connection, needed for the game. 
+## Frontend 
+
