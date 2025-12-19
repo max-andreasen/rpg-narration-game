@@ -228,3 +228,4 @@ __pycache__/
 test_narrator.py
 backend/db/RAG/vec_DB
 GEMINI.md
+backend/db/saved-data
