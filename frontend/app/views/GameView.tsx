@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { PlayersView } from "./PlayersView";
+import { PlayersView } from "../components/PlayersView";
 import GameChat from "./GameChat";
 import { ChatMessage, Player } from "../types";
 import { useState, useEffect } from "react";

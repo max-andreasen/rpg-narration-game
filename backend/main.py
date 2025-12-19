@@ -162,6 +162,23 @@ async def root():
     return {"message": "Server running"}
 
 
+@app.get("/startgame")
+async def start_game():
+    data_packet: WebsocketDataPacket = {
+        "sender": "system",
+        "type": "startgame",
+        "message": "Something went wrong when handling response in the server...",
+    }
+    await ws_manager.broadcast_message(data_packet)
+
+    # After game has started, sends out narrator's first message.
+    data_packet:WebsocketDataPacket = {
+        "sender": "narrator", 
+        "type": "narration",
+        "message": "Welcome to the world of magic, wonder and adventure! You are all currently in the Starting Village. Here you can smell the fresh breeze from the sea, hear the blacksmith hammer echo through the narrow streets and feel the warming comfort of the sun. However, the townsfolk are wary, rumours of a dark wizard has spread throughout the town. Your quest is to stop the dark wizard! It is said that he lives in an obsidian tower, beyond the enchanted forest to the west. But it has also been rumours that the old passage through the Rocky Hills will lead you straight to the Dark wizard. Be cautious though, because the enchanted forest is know for its deception, and at night the screems of Ghouls can be heard from the Rocky Hills. Your quest starts here. What do you want to do?"
+    }
+    await ws_manager.broadcast_message(data_packet)
+
 @app.get("/session")
 async def get_sesssion():
     return game_session

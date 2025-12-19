@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useContext } from "react";
 import { ChatMessage, Player } from "../types";
-import ChatMessageComponent from "./ChatMessageComponent";
+import ChatMessageComponent from "../components/ChatMessageComponent";
 import useTypewriter from "../hooks/useTypewriter";
 import { GameApiContext } from "../GameAPIContext";
-import WaitingForPlayers from "./WaitingForPlayers";
-import TypingDots from "./TypingDots";
+import WaitingForPlayers from "../components/WaitingForPlayers";
+import TypingDots from "../components/TypingDots";
 
 interface Props {
   chatHistory: (ChatMessage & { status?: "loading" })[];
@@ -26,39 +26,40 @@ export default function GameChat({
   hasPlayerActed,
 }: Props) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const { playerID, turn } = useContext(GameApiContext)!;
+  const { turn } = useContext(GameApiContext)!;
 
-  // Sort chat by timestamp
   const chatLog = [...chatHistory].sort(
     (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)
   );
 
-  // Find last narrator message
   const lastNarratorMessage = [...chatLog]
     .reverse()
     .find((m) => m.sender === "narrator");
 
-  // Waiting states
   const isWaitingForNarrator =
     lastNarratorMessage?.status === "loading";
 
   const isWaitingForOtherPlayers =
     hasPlayerActed && !isWaitingForNarrator;
 
-  // Typewriter only for finished narrator messages
   const displayedNarratorMessage = useTypewriter(
-    !isWaitingForNarrator && lastNarratorMessage?.message
-      ? lastNarratorMessage.message
-      : "",
+    lastNarratorMessage?.message ?? "",
     10
   );
 
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+    const el = chatContainerRef.current;
+    if (!el) return;
+
+    const isNearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 300;
+
+    // Auto-scroll if user is near the bottom
+    if (isNearBottom) {
+      el.scrollTop = el.scrollHeight;
     }
-  }, [chatLog, displayedNarratorMessage, isWaitingForOtherPlayers]);
+  }, [displayedNarratorMessage, chatLog.length]);
+
 
   return (
     <div className="w-full flex flex-col md:flex-row justify-center gap-x-8 mt-20 md:mt-0 md:ml-64">
@@ -87,7 +88,7 @@ export default function GameChat({
               >
                 <ChatMessageComponent
                   message={
-                    isLastNarratorMessage && !isWaitingForNarrator
+                    isLastNarratorMessage
                       ? displayedNarratorMessage
                       : msg.message
                   }
@@ -106,7 +107,6 @@ export default function GameChat({
             );
           })}
 
-          {/* Typing dots when waiting for other players */}
           {isWaitingForOtherPlayers && (
             <div className="flex justify-end pr-14 mt-1">
               <TypingDots />
@@ -135,12 +135,12 @@ export default function GameChat({
 
           <button
             type="submit"
+            disabled={isWaitingForNarrator || hasPlayerActed}
             className={`rounded-md border-2 px-4 py-2 font-semibold ${
               isWaitingForNarrator || hasPlayerActed
                 ? "border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed shadow-none"
                 : "border-[#e3c779] bg-[#8c5d25] text-[#f9edd3] shadow-[0_3px_0_#5a3b1a] active:translate-y-0.5"
             }`}
-            disabled={isWaitingForNarrator || hasPlayerActed}
           >
             Act
           </button>
