@@ -12,7 +12,7 @@ the other model (state_management.py) which handles the states.
 
 from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
-from models.quest_manager import QuestManager
+import asyncio
 from session import game_session
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,24 +47,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def load_quests_from_file():
-    file_path = os.path.join(
-        os.path.dirname(__file__), "db", "json", "quests_state_map.json"
-    )
-
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data["quests"]
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        return {}
-
-
-QUEST_DEFINITIONS = load_quests_from_file()
 
 
 async def player_action_message(payload: PlayerMessage):
@@ -116,7 +98,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # LLM determines the type of message (action, world)
             router = InputRouter()
             data_type = router.classify(data_message)
-
+            
             world_model = WorldModel()
             narrator = Narrator()
 
@@ -129,9 +111,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "world",
                     "message": answer,
                 }
-                await ws_manager.private_message(
-                    player_id, data_packet
-                )  # sends resonse ONLY to asking player
+                await ws_manager.private_message(player_id, data_packet) # sends resonse ONLY to asking player
 
             # Handles player action
             elif data_type == "action":
@@ -142,77 +122,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "action",
                     "message": data_message,
                 }
-                await ws_manager.broadcast_message(data_packet)
-                if all_messages:
-                    # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
-
-                    current_player_data = get_player(player_id) or {}
-                    completed_quests_list = current_player_data.get(
-                        "completed_quests", []
-                    )
-
-                    active_quests_list = []
-
-                    for q_id, q_info in QUEST_DEFINITIONS.items():
-
-                        if q_id in completed_quests_list:
-                            continue
-
-                        prereqs = q_info.get("prerequisites", [])
-
-                        are_prereqs_met = True
-                        for p_id in prereqs:
-                            if p_id not in completed_quests_list:
-                                are_prereqs_met = False
-                                break
-
-                        if are_prereqs_met:
-                            active_quests_list.append(q_info)
-
-                    narrator_message = narrator.generate(
-                        session_id="session_1",
-                        game_state={"player_messages": all_messages},
-                        quests_data=active_quests_list,
-                    )
-
-                    run_state_management()  # updates the game state based on the actions taken by players
-
-                    completed_quests = get_player_completed_quests(player_id)
-                    current_player = get_player(player_id)
-
-                    if current_player is None:
-                        current_player = {}
-
-                    current_location = current_player.get("position", "startingVillage")
-
-                    qm = QuestManager(QUEST_DEFINITIONS)
-
-                    newly_completed_ids = qm.check_progress(
-                        player_location=current_location,
-                        completed_quests_ids=completed_quests,
-                        narration=narrator_message,
-                        player_action=data_message,
-                    )
-
-                    if newly_completed_ids:
-
-                        quest_names = []
-                        for qid in newly_completed_ids:
-                            add_completed_quest(player_id, qid)
-
-                            q_title = QUEST_DEFINITIONS[qid]["title"]
-                            quest_names.append(q_title)
-
-                        await ws_manager.private_message(
-                            player_id,
-                            {
-                                "sender": "System",
-                                "type": "system",
-                            },
-                        )
-
+                await ws_manager.broadcast_message(data_packet) # broadcasts the player action to ALL players
+                if all_messages: # If all players has sent an action message
+                    game_session.set_all_players_status("narrator_thinking")
+                    await asyncio.sleep(1) # Give frontend time to update
+                    narrator_message = narrator.generate("session_1", {"player_messages": all_messages}) # TODO: Fix so this is correctly formatted
+                    run_state_management() # updates the game state based on the actions taken by players
                     game_session.new_turn()
-                    game_session.set_all_players_status("waiting")
+                    game_session.set_all_players_status("waiting") 
                     data_packet = {
                         "sender": "narrator",
                         "type": "narration",
@@ -295,7 +212,7 @@ async def join(request: JoinRequest):
     # request contains a JSON with the data
     pid = game_session.add_player(name=name, race=race, gender=gender)
 
-    new_player_data = {  # TODO: correct type
+    new_player_data = { # TODO: correct type
         "id": pid,
         "name": name,
         "race": race,
@@ -304,7 +221,6 @@ async def join(request: JoinRequest):
         "items": [request.startingItem],
         "hp": 100,
         "position": "startingVillage",
-        "completed_quests": [],
     }
 
     try:

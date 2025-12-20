@@ -229,21 +229,3 @@ def read_json_states(players_dict: dict) -> str:
 def delete_player(player_id: str) -> bool:
     result = players_collection.delete_one({"id": player_id})
     return result.deleted_count > 0
-
-
-def get_player_completed_quests(player_id: str) -> list:
-    player = players_collection.find_one(
-        {"id": player_id}, {"completed_quests": 1, "_id": 0}
-    )
-
-    if player and "completed_quests" in player:
-        return player["completed_quests"]
-
-    return []
-
-
-def add_completed_quest(player_id: str, quest_id: str):
-    result = players_collection.update_one(
-        {"id": player_id}, {"$addToSet": {"completed_quests": quest_id}}
-    )
-    return result.modified_count > 0
