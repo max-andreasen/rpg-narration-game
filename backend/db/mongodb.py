@@ -38,6 +38,8 @@ def get_all_players() -> list[Dict[str, Any]]:
                 "name": player.get("name"),
                 "race": player.get("race"),
                 "gender": player.get("gender"),
+                "hp": player.get("hp", 100),
+                "items": player.get("items", []),
             }
         )
     return players
