@@ -10,6 +10,7 @@ uses that output as a response to the clients. Also calls
 the other model (state_management.py) which handles the states.
 """
 
+import asyncio
 from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
 from models.quest_manager import QuestManager
@@ -169,6 +170,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         if are_prereqs_met:
                             active_quests_list.append(q_info)
 
+                    game_session.set_all_players_status("narrator_thinking")
+                    await asyncio.sleep(1)
+
                     narrator_message = narrator.generate(
                         session_id="session_1",
                         game_state={"player_messages": all_messages},
@@ -219,7 +223,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": narrator_message,
                     }
                     await ws_manager.broadcast_message(data_packet)
-                    save_to_file() # saves conversation to file 
+                    save_to_file()  # saves conversation to file
             else:
                 data_packet: WebsocketDataPacket = {
                     "sender": "system",
@@ -256,12 +260,13 @@ async def start_game():
     await ws_manager.broadcast_message(data_packet)
 
     # After game has started, sends out narrator's first message.
-    data_packet:WebsocketDataPacket = {
-        "sender": "narrator", 
+    data_packet: WebsocketDataPacket = {
+        "sender": "narrator",
         "type": "narration",
-        "message": "Welcome to the world of magic, wonder and adventure! You are all currently in the Starting Village. Here you can smell the fresh breeze from the sea, hear the blacksmith hammer echo through the narrow streets and feel the warming comfort of the sun. However, the townsfolk are wary, rumours of a dark wizard has spread throughout the town. Your quest is to stop the dark wizard! It is said that he lives in an obsidian tower, beyond the enchanted forest to the west. But it has also been rumours that the old passage through the Rocky Hills will lead you straight to the Dark wizard. Be cautious though, because the enchanted forest is know for its deception, and at night the screems of Ghouls can be heard from the Rocky Hills. Your quest starts here. What do you want to do?"
+        "message": "Welcome to the world of magic, wonder and adventure! You are all currently in the Starting Village. Here you can smell the fresh breeze from the sea, hear the blacksmith hammer echo through the narrow streets and feel the warming comfort of the sun. However, the townsfolk are wary, rumours of a dark wizard has spread throughout the town. Your quest is to stop the dark wizard! It is said that he lives in an obsidian tower, beyond the enchanted forest to the west. But it has also been rumours that the old passage through the Rocky Hills will lead you straight to the Dark wizard. Be cautious though, because the enchanted forest is know for its deception, and at night the screems of Ghouls can be heard from the Rocky Hills. Your quest starts here. What do you want to do?",
     }
     await ws_manager.broadcast_message(data_packet)
+
 
 @app.get("/session")
 async def get_sesssion():
@@ -272,6 +277,7 @@ async def get_sesssion():
 async def players():
     players = game_session.get_players()
     return {"players": players}
+
 
 # Saves data in databse to a local file in the backend
 @app.get("/save")
