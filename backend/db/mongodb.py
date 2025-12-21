@@ -81,13 +81,24 @@ def get_next_turn_index(session_id: str) -> int:
     return 1
 
 
-def get_turns(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
+def get_turns_old(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
     cursor = (
         game_context_collection.find({"session_id": session_id})
         .sort("turn_index", 1)
         .limit(limit)
     )
     return list(cursor)
+
+def get_turns(session_id: str, limit: int = 6) -> list[Dict[str, Any]]:
+    cursor = (
+        game_context_collection.find({"session_id": session_id})
+        .sort("turn_index", -1)
+        .limit(limit)
+    )
+    # Convert to list and reverse so it is in ascending order (15, 16, 17...)
+    return list(cursor)[::-1]
+
+
 
 
 # Retrieves the latest file that has been written to
