@@ -38,7 +38,7 @@ class Narrator:
         )
 
     def build_prompt(
-        self, session_id: str, game_state: dict, world_context: str, n_turns: int
+        self, session_id: str, game_state: dict, world_context: str, n_turns: int, players_data: dict
     ):
         messages = []
 
@@ -50,25 +50,26 @@ class Narrator:
             messages.append(SystemMessage(content=f"WORLD CONTEXT:\n{world_context}"))
             # this is where we say what the world looks like, items, NPCs etc.
 
-        if game_state:
-            messages.append(SystemMessage(content=f"GAME STATE:\n{game_state}"))
-
         # Previous turns from DB
         turns = get_turns(session_id, limit=n_turns)
         for turn in turns:
             messages.append(SystemMessage(content=f"NARRATOR: {turn['narration']}"))
             for pid, txt in turn["player_prompts"].items():
-                messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
+                name = players_data.get(pid, {}).get("name", pid)
+                messages.append(HumanMessage(content=f"Player {name}: {txt}"))
 
         # Latest user input
+        messages.append(SystemMessage(content="--- LATEST PLAYER ACTIONS (Respond to these) ---"))
         for pid, txt in game_state["player_messages"].items():
-            messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
+            name = players_data.get(pid, {}).get("name", pid)
+            messages.append(HumanMessage(content=f"Player {name}: {txt}"))
 
         return messages
 
     def generate(self, session_id: str, game_state: dict) -> str:
-        world_context = read_json_states(read_player_state())
-        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20)
+        players_data = read_player_state()
+        world_context = read_json_states(players_data)
+        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20, players_data=players_data)
         ai_message = self.model.invoke(prompt)
         content = ai_message.content
 

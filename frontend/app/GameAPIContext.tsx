@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, ReactNode, useState, useEffect } from "react";
+import { createContext, ReactNode, useState, useEffect, useRef } from "react";
 import { Player, ChatMessage } from "./types";
 
 interface GameApiContextType {
@@ -42,6 +42,8 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]); // keeps an array of chat messages (check Message type)
   const [systemMessage, setSystemMessage] = useState<string>(""); // auto-clears after a time-out (e.g. 5s)
   const [narratorIsThinking, setNarratorIsThinking] = useState(false);
+  
+  const systemMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Same info also in Player object from backend (status property)
   // We model it here in this state as well for instant UI changes
@@ -219,7 +221,15 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
           return;
         } else {
           setSystemMessage(data.message);
-          setTimeout(() => setSystemMessage(""), 5000); // auto-hide after 5s
+          
+          if (systemMessageTimerRef.current) {
+            clearTimeout(systemMessageTimerRef.current);
+          }
+          systemMessageTimerRef.current = setTimeout(() => {
+             setSystemMessage("");
+             systemMessageTimerRef.current = null;
+          }, 5000); // auto-hide after 5s
+          
           return;
         }
       }
