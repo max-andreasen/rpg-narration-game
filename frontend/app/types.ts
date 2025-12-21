@@ -15,6 +15,8 @@ export interface Player {
   race: string;
   gender: string;
   status: "waiting" | "action_submitted" | "narrator_thinking";
+  hp?: number;
+  items?: string[];
 }
 
 // Primarily used for frontend, e.g. what is kept in the states. 

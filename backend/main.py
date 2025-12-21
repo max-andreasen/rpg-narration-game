@@ -187,8 +187,24 @@ async def get_sesssion():
 
 @app.get("/players")
 async def players():
-    players = game_session.get_players()
-    return {"players": players}
+    # Get session status (waiting, etc.)
+    session_players = game_session.get_players()
+    
+    # Get persistent state (hp, items)
+    db_players_list = get_all_players()
+    db_players_map = {p["id"]: p for p in db_players_list}
+    
+    # Merge
+    merged_players = {}
+    for pid, s_player in session_players.items():
+        db_p = db_players_map.get(pid, {})
+        merged_players[pid] = {
+            **s_player, # name, race, gender, status
+            "hp": db_p.get("hp", 100),
+            "items": db_p.get("items", [])
+        }
+        
+    return {"players": merged_players}
 
 # Saves data in databse to a local file in the backend
 @app.get("/save")
