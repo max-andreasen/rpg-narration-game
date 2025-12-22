@@ -35,6 +35,7 @@ class Narrator:
             "3. Reasonable Actions: If a player lacks the necessary items or attempts something physically impossible, describe their failure in a humorous or ironic way."
             "4. Consequence: Actions have stakes. If a player fails a dangerous task or is attacked, describe the damage (1-100) they take clearly within the narrative."
             "5. Conciseness: Keep descriptions vivid but brief to keep the game moving."
+            "6. Movement: Players can only move to locations directly connected to their current location as per the GAME STATE."
         )
 
     def build_prompt(
@@ -86,7 +87,7 @@ class Narrator:
             for q in quests_data:
                 quest_context_str += f"- Quest '{q['title']}': {q['description']} (Target: {q.get('target_item') or q.get('target_npc')})\n"
 
-        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20, players_data=players_data, quest_context=quest_context_str) # Passed quest_context_str
+        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=5, players_data=players_data, quest_context=quest_context_str) # Passed quest_context_str
         ai_message = self.model.invoke(prompt)
         content = ai_message.content
 
