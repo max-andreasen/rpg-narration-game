@@ -8,13 +8,13 @@
     },
     "enchantedForest": {
       "description": "A dense, ancient wood where the trees whisper secrets and the air hums with faint magic. Paths twist and disappear, making it easy to get lost. When getting lost, the player is transported into a adjacent location instead of the intended one. Using a compass, the player never gets lost in the woods!",
-      "canGoTo": ["obsidianTower"],
+      "canGoTo": ["startingVillage", "mistyLake"],
       "items": [],
       "npcs": ["Fairy", "Goblin"]
     },
     "rockyHills": {
       "description": "A dry and desolate area filled with jagged rocks and steep inclines. The terrain is challenging, and the wind howls through the crags. Beware of sudden drops and loose stones. Up on the largest cliff, there is a tressure chest in clear sight. To climb up the cliff, a sturdy rope is required. Hidden among the rocks are **caves** that may hold secrets. Inside the caves, the giant spider resides. Traversing these safely requires a lantern.",
-      "canGoTo": ["obsidianTower"],
+      "canGoTo": ["forgottenCrypt", "crystalCavern"],
       "items": [],
       "npcs": ["GiantSpider"]
     },
@@ -27,19 +27,19 @@
   },
   "merchantCrossroads": {
     "description": "A bustiling intersection of dirt roads where travelers and traders set up temporary stalls. It smells of spices and campfire smoke. It is safer than the wilds, but pickpockets abound. You can buy supplies here if you have something to trade. A trader is shouting about selling a **sturdy rope** to anyone brave enough to climb the hills.",
-    "canGoTo": ["startingVillage", "mistyLake"],
+    "canGoTo": ["mistyLake", "obsidianTower"],
     "items": ["sturdyRope", "apple"],
     "npcs": ["WanderingTrader", "Pickpocket"]
   },
   "mistyLake": {
     "description": "A vast body of still water covered in a perpetual, thick fog. Visibility is near zero. In the center of the lake, a small island is visible only when the fog clears momentarily. Legend says a navigator left his **compass** here long ago. The ground is muddy and wet.",
-    "canGoTo": ["merchantCrossroads", "enchantedForest"],
+    "canGoTo": ["merchantCrossroads", "enchantedForest", "obsidianTower"],
     "items": ["compass", "rawFish"],
     "npcs": ["Fisherman", "WaterSpirit"]
   },
   "forgottenCrypt": {
-    "description": "An ancient underground burial site accessible through a cracked stone slab near the village. The air is stale and cold. It is incredibly dark inside, shadows seem to move on their own. In the corner of the entrance hall, an old **lantern** hangs on a rusted hook, still containing some oil.",
-    "canGoTo": ["startingVillage", "rockyHills"],
+    "description": "An ancient underground burial site accessible through a cracked stone slab near the village. The air is stale and cold. It is incredibly dark inside, shadows seem to move on their own. In the corner of the entrance hall, an old **lantern** hangs on a rusted hook, still containing some oil. There is a tunnel at the end of the cavern that leads to the obsidian tower",
+    "canGoTo": ["obsidianTower", "rockyHills"],
     "items": ["lantern", "boneKey"],
     "npcs": ["SkeletonWarrior", "Ghost"]
   },
