@@ -357,6 +357,7 @@ export function GameApiProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log("Narrator thinking? ", narratorIsThinking);
     if (narratorIsThinking) {
       const loadingMessage: ChatMessage = {
         sender: "narrator",
