@@ -38,7 +38,7 @@ class Narrator:
         )
 
     def build_prompt(
-        self, session_id: str, game_state: dict, world_context: str, n_turns: int, players_data: dict
+        self, session_id: str, game_state: dict, world_context: str, n_turns: int, players_data: dict, quest_context: str = "" # Added quest_context parameter
     ):
         messages = []
 
@@ -49,6 +49,16 @@ class Narrator:
         if world_context:
             messages.append(SystemMessage(content=f"WORLD CONTEXT:\n{world_context}"))
             # this is where we say what the world looks like, items, NPCs etc.
+
+        # Added Quest Log block
+        if quest_context:
+            q_message = (
+                f"QUEST LOG (Current Player Objectives):\n"
+                f"{quest_context}\n"
+                f"INSTRUCTIONS: Use this to drive the narrative. If the player interacts with a Quest Target (NPC or Item), "
+                f"describe the outcome vividly. If they are in a quest location, hint at the objective."
+            )
+            messages.append(SystemMessage(content=q_message))
 
         # Previous turns from DB
         turns = get_turns(session_id, limit=n_turns)
@@ -66,10 +76,17 @@ class Narrator:
 
         return messages
 
-    def generate(self, session_id: str, game_state: dict) -> str:
+    def generate(self, session_id: str, game_state: dict, quests_data: list = None) -> str: # Added quests_data parameter
         players_data = read_player_state()
         world_context = read_json_states(players_data)
-        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20, players_data=players_data)
+
+        # Added quest context string construction
+        quest_context_str = ""
+        if quests_data:
+            for q in quests_data:
+                quest_context_str += f"- Quest '{q['title']}': {q['description']} (Target: {q.get('target_item') or q.get('target_npc')})\n"
+
+        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20, players_data=players_data, quest_context=quest_context_str) # Passed quest_context_str
         ai_message = self.model.invoke(prompt)
         content = ai_message.content
 
