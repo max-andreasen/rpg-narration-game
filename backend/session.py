@@ -19,8 +19,12 @@ class GameSession:
         return pid
 
     def set_player_status(self, pid, status):
-        if pid in self.players:
+        pid = str(pid)
+        print(self.players.keys())
+        if pid in self.players.keys():
             self.players[pid]["status"] = status
+        else:
+            print(f"Player ID {pid} was not found in players")
     
     def set_all_players_status(self, status):
         for pid in self.players:
@@ -28,6 +32,12 @@ class GameSession:
 
     def get_players(self):
         return self.players
+    
+    def get_turn(self):
+        """
+        Returns the current turn of the game. 
+        """
+        return self.turn
 
     def add_message(self, pid, message):
         if pid not in self.players:

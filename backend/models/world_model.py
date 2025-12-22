@@ -11,7 +11,6 @@ from models.rag import *
 load_dotenv(override=True)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-
 class WorldModel:
 
     def __init__(self):

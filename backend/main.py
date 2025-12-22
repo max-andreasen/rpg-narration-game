@@ -29,6 +29,7 @@ from models.narrator import Narrator
 from models.world_model import WorldModel
 from models.router import InputRouter
 from models.state import run_state_management
+from db.convo_storage_manager import save_convo_to_file, save_actions_to_file
 
 # Importing schemas / models.
 from schemas import PlayerMessage, JoinRequest, PlayerCreate, WebsocketDataPacket
@@ -105,14 +106,18 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # Handles player question / world query
             if data_type == "world":
+                game_session.set_player_status(data_sender_id, "narrator_thinking")
                 print("World query detected.")
-                answer = world_model.generate(player_id, data_message)
+                await asyncio.sleep(1)
+                answer = world_model.generate(data_sender_id, data_message)
                 data_packet: WebsocketDataPacket = {
                     "sender": "narrator",
                     "type": "world",
                     "message": answer,
                 }
-                await ws_manager.private_message(player_id, data_packet) # sends resonse ONLY to asking player
+                await ws_manager.private_message(player_id, data_packet) # sends response ONLY to asking player
+                save_convo_to_file(data_sender_id, data_message, answer, game_session.get_turn()) # saves conversation in JSON file 
+                game_session.set_player_status(data_sender_id, "waiting")
 
             # Handles player action
             elif data_type == "action":
@@ -125,7 +130,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 }
                 await ws_manager.broadcast_message(data_packet)
                 if all_messages:
-                    # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
 
                     current_player_data = get_player(player_id) or {}
                     completed_quests_list = current_player_data.get(
@@ -203,7 +207,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": narrator_message,
                     }
                     await ws_manager.broadcast_message(data_packet)
-                    save_to_file()  # saves conversation to file
+                    save_actions_to_file(players_collection, game_context_collection)  # saves action messages and narrator response to JSON file
+
+            # System handler, if neither world or action type message
             else:
                 data_packet: WebsocketDataPacket = {
                     "sender": "system",
@@ -212,6 +218,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 }
                 await ws_manager.private_message(player_id, data_packet)
 
+    # Websocket disconnection
     except WebSocketDisconnect as e:
         print("WebSocket disconnected:", e)
         await ws_manager.disconnect(player_id)
@@ -278,7 +285,10 @@ async def players():
 # Saves data in databse to a local file in the backend
 @app.get("/save")
 async def save_data():
-    save_to_file()
+    """
+    Specifically saves the actions in the database to the stored JSON files. 
+    """
+    save_actions_to_file(players_collection, game_context_collection)
     return {"message": "Data saved."}
 
 
