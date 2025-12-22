@@ -30,6 +30,7 @@ from models.world_model import WorldModel
 from models.router import InputRouter
 from models.state import run_state_management
 from db.convo_storage_manager import save_convo_to_file, save_actions_to_file
+from quest_manager import QuestManager
 
 # Importing schemas / models.
 from schemas import PlayerMessage, JoinRequest, PlayerCreate, WebsocketDataPacket
@@ -42,14 +43,29 @@ origins = [
     "http://localhost:5173",
 ]
 
-app.add_middleware(
+app.add_middleware(#'z'
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+def load_quests_from_file():
+    file_path = os.path.join(
+        os.path.dirname(__file__), "db", "json", "quests_state_map.json"
+    )
 
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data["quests"]
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        return {}
+
+
+QUEST_DEFINITIONS = load_quests_from_file()
 
 async def player_action_message(payload: PlayerMessage):
     try:
