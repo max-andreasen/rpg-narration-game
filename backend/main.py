@@ -10,6 +10,7 @@ uses that output as a response to the clients. Also calls
 the other model (state_management.py) which handles the states.
 """
 
+import asyncio
 from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
 import asyncio
@@ -122,12 +123,78 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "action",
                     "message": data_message,
                 }
-                await ws_manager.broadcast_message(data_packet) # broadcasts the player action to ALL players
-                if all_messages: # If all players has sent an action message
+                await ws_manager.broadcast_message(data_packet)
+                if all_messages:
+                    # TODO: Ping frontend so we can display feedback. Takes some time to run the LLM.
+
+                    current_player_data = get_player(player_id) or {}
+                    completed_quests_list = current_player_data.get(
+                        "completed_quests", []
+                    )
+
+                    active_quests_list = []
+
+                    for q_id, q_info in QUEST_DEFINITIONS.items():
+
+                        if q_id in completed_quests_list:
+                            continue
+
+                        prereqs = q_info.get("prerequisites", [])
+
+                        are_prereqs_met = True
+                        for p_id in prereqs:
+                            if p_id not in completed_quests_list:
+                                are_prereqs_met = False
+                                break
+
+                        if are_prereqs_met:
+                            active_quests_list.append(q_info)
+
                     game_session.set_all_players_status("narrator_thinking")
-                    await asyncio.sleep(1) # Give frontend time to update
-                    narrator_message = narrator.generate("session_1", {"player_messages": all_messages}) # TODO: Fix so this is correctly formatted
-                    run_state_management() # updates the game state based on the actions taken by players
+                    await asyncio.sleep(1)
+
+                    narrator_message = narrator.generate(
+                        session_id="session_1",
+                        game_state={"player_messages": all_messages},
+                        quests_data=active_quests_list,
+                    )
+
+                    run_state_management()  # updates the game state based on the actions taken by players
+
+                    completed_quests = get_player_completed_quests(player_id)
+                    current_player = get_player(player_id)
+
+                    if current_player is None:
+                        current_player = {}
+
+                    current_location = current_player.get("position", "startingVillage")
+
+                    qm = QuestManager(QUEST_DEFINITIONS)
+
+                    newly_completed_ids = qm.check_progress(
+                        player_location=current_location,
+                        completed_quests_ids=completed_quests,
+                        narration=narrator_message,
+                        player_action=data_message,
+                    )
+
+                    if newly_completed_ids:
+
+                        quest_names = []
+                        for qid in newly_completed_ids:
+                            add_completed_quest(player_id, qid)
+
+                            q_title = QUEST_DEFINITIONS[qid]["title"]
+                            quest_names.append(q_title)
+
+                        await ws_manager.private_message(
+                            player_id,
+                            {
+                                "sender": "System",
+                                "type": "system",
+                            },
+                        )
+
                     game_session.new_turn()
                     game_session.set_all_players_status("waiting") 
                     data_packet = {
@@ -136,7 +203,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "message": narrator_message,
                     }
                     await ws_manager.broadcast_message(data_packet)
-                    save_to_file() # saves conversation to file 
+                    save_to_file()  # saves conversation to file
             else:
                 data_packet: WebsocketDataPacket = {
                     "sender": "system",
@@ -173,12 +240,13 @@ async def start_game():
     await ws_manager.broadcast_message(data_packet)
 
     # After game has started, sends out narrator's first message.
-    data_packet:WebsocketDataPacket = {
-        "sender": "narrator", 
+    data_packet: WebsocketDataPacket = {
+        "sender": "narrator",
         "type": "narration",
-        "message": "Welcome to the world of magic, wonder and adventure! You are all currently in the Starting Village. Here you can smell the fresh breeze from the sea, hear the blacksmith hammer echo through the narrow streets and feel the warming comfort of the sun. However, the townsfolk are wary, rumours of a dark wizard has spread throughout the town. Your quest is to stop the dark wizard! It is said that he lives in an obsidian tower, beyond the enchanted forest to the west. But it has also been rumours that the old passage through the Rocky Hills will lead you straight to the Dark wizard. Be cautious though, because the enchanted forest is know for its deception, and at night the screems of Ghouls can be heard from the Rocky Hills. Your quest starts here. What do you want to do?"
+        "message": "Welcome to the world of magic, wonder and adventure! You are all currently in the Starting Village. Here you can smell the fresh breeze from the sea, hear the blacksmith hammer echo through the narrow streets and feel the warming comfort of the sun. However, the townsfolk are wary, rumours of a dark wizard has spread throughout the town. Your quest is to stop the dark wizard! It is said that he lives in an obsidian tower, beyond the enchanted forest to the west. But it has also been rumours that the old passage through the Rocky Hills will lead you straight to the Dark wizard. Be cautious though, because the enchanted forest is know for its deception, and at night the screems of Ghouls can be heard from the Rocky Hills. Your quest starts here. What do you want to do?",
     }
     await ws_manager.broadcast_message(data_packet)
+
 
 @app.get("/session")
 async def get_sesssion():
@@ -205,6 +273,7 @@ async def players():
         }
         
     return {"players": merged_players}
+
 
 # Saves data in databse to a local file in the backend
 @app.get("/save")
