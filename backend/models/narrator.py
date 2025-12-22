@@ -38,12 +38,7 @@ class Narrator:
         )
 
     def build_prompt(
-        self,
-        session_id: str,
-        game_state: dict,
-        world_context: str,
-        n_turns: int,
-        quest_context: str,
+        self, session_id: str, game_state: dict, world_context: str, n_turns: int, players_data: dict, quest_context: str = "" # Added quest_context parameter
     ):
         messages = []
 
@@ -55,6 +50,7 @@ class Narrator:
             messages.append(SystemMessage(content=f"WORLD CONTEXT:\n{world_context}"))
             # this is where we say what the world looks like, items, NPCs etc.
 
+        # Added Quest Log block
         if quest_context:
             q_message = (
                 f"QUEST LOG (Current Player Objectives):\n"
@@ -64,35 +60,33 @@ class Narrator:
             )
             messages.append(SystemMessage(content=q_message))
 
-        if game_state:
-            messages.append(SystemMessage(content=f"GAME STATE:\n{game_state}"))
-
         # Previous turns from DB
         turns = get_turns(session_id, limit=n_turns)
         for turn in turns:
             messages.append(SystemMessage(content=f"NARRATOR: {turn['narration']}"))
             for pid, txt in turn["player_prompts"].items():
-                messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
+                name = players_data.get(pid, {}).get("name", pid)
+                messages.append(HumanMessage(content=f"Player {name}: {txt}"))
 
         # Latest user input
+        messages.append(SystemMessage(content="--- LATEST PLAYER ACTIONS (Respond to these) ---"))
         for pid, txt in game_state["player_messages"].items():
-            messages.append(HumanMessage(content=f"Player {pid}: {txt}"))
+            name = players_data.get(pid, {}).get("name", pid)
+            messages.append(HumanMessage(content=f"Player {name}: {txt}"))
 
         return messages
 
-    def generate(self, session_id: str, game_state: dict, quests_data: list) -> str:
-        world_context = read_json_states(read_player_state())
+    def generate(self, session_id: str, game_state: dict, quests_data: list = None) -> str: # Added quests_data parameter
+        players_data = read_player_state()
+        world_context = read_json_states(players_data)
+
+        # Added quest context string construction
         quest_context_str = ""
         if quests_data:
             for q in quests_data:
                 quest_context_str += f"- Quest '{q['title']}': {q['description']} (Target: {q.get('target_item') or q.get('target_npc')})\n"
-        prompt = self.build_prompt(
-            session_id,
-            game_state,
-            world_context,
-            n_turns=20,
-            quest_context=quest_context_str,
-        )
+
+        prompt = self.build_prompt(session_id, game_state, world_context, n_turns=20, players_data=players_data, quest_context=quest_context_str) # Passed quest_context_str
         ai_message = self.model.invoke(prompt)
         content = ai_message.content
 
