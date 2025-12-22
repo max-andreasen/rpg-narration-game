@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "langchain": "^1.1.1"
+    "langchain": "^1.1.1",
+    "ngrok": "^5.0.0-beta.2"
   }
 }

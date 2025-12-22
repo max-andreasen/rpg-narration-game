@@ -32,18 +32,26 @@ export default function GameView({
 
   // Show popup when systemMessage changes
   useEffect(() => {
+    let hideTimeout: NodeJS.Timeout;
+    let clearPopup: NodeJS.Timeout;
+
     if (systemMessage) {
       setPopupMessage(systemMessage);
       setVisible(true);
 
-      const hideTimeout = setTimeout(() => setVisible(false), 3500); // fade out after 3.5s
-      const clearPopup = setTimeout(() => setPopupMessage(null), 4000); // remove from DOM after 4s
-
-      return () => {
-        clearTimeout(hideTimeout);
-        clearTimeout(clearPopup);
-      };
+      hideTimeout = setTimeout(() => setVisible(false), 3500); // fade out after 3.5s
+      clearPopup = setTimeout(() => setPopupMessage(null), 4000); // remove from DOM after 4s
+    } else {
+      // If systemMessage becomes empty (cleared by Context), ensure we hide it.
+      setVisible(false);
+      // Wait for fade out (matches transition duration 500ms)
+      clearPopup = setTimeout(() => setPopupMessage(null), 500);
     }
+
+    return () => {
+      clearTimeout(hideTimeout);
+      clearTimeout(clearPopup);
+    };
   }, [systemMessage]);
 
   const onResetGame = () => {

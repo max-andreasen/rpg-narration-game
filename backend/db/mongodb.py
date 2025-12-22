@@ -38,6 +38,8 @@ def get_all_players() -> list[Dict[str, Any]]:
                 "name": player.get("name"),
                 "race": player.get("race"),
                 "gender": player.get("gender"),
+                "hp": player.get("hp", 100),
+                "items": player.get("items", []),
             }
         )
     return players
@@ -81,13 +83,24 @@ def get_next_turn_index(session_id: str) -> int:
     return 1
 
 
-def get_turns(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
+def get_turns_old(session_id: str, limit: int = 10) -> list[Dict[str, Any]]:
     cursor = (
         game_context_collection.find({"session_id": session_id})
         .sort("turn_index", 1)
         .limit(limit)
     )
     return list(cursor)
+
+def get_turns(session_id: str, limit: int = 6) -> list[Dict[str, Any]]:
+    cursor = (
+        game_context_collection.find({"session_id": session_id})
+        .sort("turn_index", -1)
+        .limit(limit)
+    )
+    # Convert to list and reverse so it is in ascending order (15, 16, 17...)
+    return list(cursor)[::-1]
+
+
 
 
 # Retrieves the latest file that has been written to
@@ -229,21 +242,3 @@ def read_json_states(players_dict: dict) -> str:
 def delete_player(player_id: str) -> bool:
     result = players_collection.delete_one({"id": player_id})
     return result.deleted_count > 0
-
-
-def get_player_completed_quests(player_id: str) -> list:
-    player = players_collection.find_one(
-        {"id": player_id}, {"completed_quests": 1, "_id": 0}
-    )
-
-    if player and "completed_quests" in player:
-        return player["completed_quests"]
-
-    return []
-
-
-def add_completed_quest(player_id: str, quest_id: str):
-    result = players_collection.update_one(
-        {"id": player_id}, {"$addToSet": {"completed_quests": quest_id}}
-    )
-    return result.modified_count > 0

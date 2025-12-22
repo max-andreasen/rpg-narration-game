@@ -19,29 +19,41 @@ export function PlayersView() {
       <h3 className="text-lg font-bold mb-2">Players</h3>
       <ul>
         {me && (
-          <li key={me.pid} className="flex items-center mb-2">
+          <li key={me.pid} className="flex items-center mb-4">
             <Image
               src={getSpritePath(me.race, me.gender)}
               alt={`${me.race} ${me.gender}`}
               width={40}
               height={40}
-              className="mr-2 w-[40px] h-[40px]"
+              className="mr-3 w-[40px] h-[40px]"
               loading="eager"
             />
-            <span>{me.name} (You)</span>
+            <div className="flex flex-col">
+              <span className="font-bold">{me.name} (You)</span>
+              <span className="text-xs text-green-400">HP: {me.hp ?? 100}</span>
+              <span className="text-xs text-gray-300">
+                 {me.items && me.items.length > 0 ? me.items.join(", ") : "No items"}
+              </span>
+            </div>
           </li>
         )}
         {otherPlayers.map((player) => (
-          <li key={player.pid} className="flex items-center mb-2">
+          <li key={player.pid} className="flex items-center mb-4">
             <Image
               src={getSpritePath(player.race, player.gender)}
               alt={`${player.race} ${player.gender}`}
               width={40}
               height={40}
-              className="mr-2 w-[40px] h-[40px]"
+              className="mr-3 w-[40px] h-[40px]"
               loading="eager"
             />
-            <span>{player.name}</span>
+            <div className="flex flex-col">
+              <span className="font-bold">{player.name}</span>
+              <span className="text-xs text-green-400">HP: {player.hp ?? 100}</span>
+              <span className="text-xs text-gray-300">
+                 {player.items && player.items.length > 0 ? player.items.join(", ") : "No items"}
+              </span>
+            </div>
           </li>
         ))}
       </ul>

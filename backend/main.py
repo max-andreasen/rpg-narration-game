@@ -13,7 +13,7 @@ the other model (state_management.py) which handles the states.
 import asyncio
 from fastapi import FastAPI, WebSocket
 from pydantic import BaseModel
-from models.quest_manager import QuestManager
+import asyncio
 from session import game_session
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,24 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def load_quests_from_file():
-    file_path = os.path.join(
-        os.path.dirname(__file__), "db", "json", "quests_state_map.json"
-    )
-
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data["quests"]
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        return {}
-
-
-QUEST_DEFINITIONS = load_quests_from_file()
 
 
 async def player_action_message(payload: PlayerMessage):
@@ -117,7 +99,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # LLM determines the type of message (action, world)
             router = InputRouter()
             data_type = router.classify(data_message)
-
+            
             world_model = WorldModel()
             narrator = Narrator()
 
@@ -130,9 +112,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "world",
                     "message": answer,
                 }
-                await ws_manager.private_message(
-                    player_id, data_packet
-                )  # sends resonse ONLY to asking player
+                await ws_manager.private_message(player_id, data_packet) # sends resonse ONLY to asking player
 
             # Handles player action
             elif data_type == "action":
@@ -216,7 +196,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         )
 
                     game_session.new_turn()
-                    game_session.set_all_players_status("waiting")
+                    game_session.set_all_players_status("waiting") 
                     data_packet = {
                         "sender": "narrator",
                         "type": "narration",
@@ -275,8 +255,24 @@ async def get_sesssion():
 
 @app.get("/players")
 async def players():
-    players = game_session.get_players()
-    return {"players": players}
+    # Get session status (waiting, etc.)
+    session_players = game_session.get_players()
+    
+    # Get persistent state (hp, items)
+    db_players_list = get_all_players()
+    db_players_map = {p["id"]: p for p in db_players_list}
+    
+    # Merge
+    merged_players = {}
+    for pid, s_player in session_players.items():
+        db_p = db_players_map.get(pid, {})
+        merged_players[pid] = {
+            **s_player, # name, race, gender, status
+            "hp": db_p.get("hp", 100),
+            "items": db_p.get("items", [])
+        }
+        
+    return {"players": merged_players}
 
 
 # Saves data in databse to a local file in the backend
@@ -301,7 +297,7 @@ async def join(request: JoinRequest):
     # request contains a JSON with the data
     pid = game_session.add_player(name=name, race=race, gender=gender)
 
-    new_player_data = {  # TODO: correct type
+    new_player_data = { # TODO: correct type
         "id": pid,
         "name": name,
         "race": race,
@@ -310,7 +306,6 @@ async def join(request: JoinRequest):
         "items": [request.startingItem],
         "hp": 100,
         "position": "startingVillage",
-        "completed_quests": [],
     }
 
     try:
