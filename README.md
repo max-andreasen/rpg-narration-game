@@ -7,9 +7,9 @@
   Upload your video to the repo or host it (e.g., YouTube) and replace the link below.
   Example: [![Demo Video](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
 -->
-<div align="center">
-  <img src="https://placehold.co/800x400?text=Video+Demo+Coming+Soon" alt="Project Demo" width="100%" />
-</div>
+
+https://github.com/user-attachments/assets/da08cd59-3940-485a-b8c2-dc88af54c297
+
 
 ---
 
@@ -117,11 +117,3 @@ To allow other players to join your local server:
 │   └── 📂 components/  # React Components
 └── 📄 requirements.txt # Python dependencies
 ```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is open source.
