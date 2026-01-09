@@ -1,58 +1,127 @@
-# rpg-narration-game
+# ⚔️ RPG Narration Game
 
-# Set-up
-How to set up localhost for development and optionally an ngrok tunnel for exposing frontend to testers. 
+> A real-time, AI-narrated Role Playing Game powered by LLMs and WebSocket technology.
 
-## Env variables
-Create a .env file in root directory. Then paste your mongodb connection URL as well as your OpenAI (or any other LLM tool credentials). 
-```
-MONGO_URL=
-OPENAI_API_KEY=
-```
+<!-- 
+  🎥 VIDEO PLACEHOLDER 
+  Upload your video to the repo or host it (e.g., YouTube) and replace the link below.
+  Example: [![Demo Video](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+-->
+<div align="center">
+  <img src="https://placehold.co/800x400?text=Video+Demo+Coming+Soon" alt="Project Demo" width="100%" />
+</div>
 
-## Install requirements
-Run; 
+---
+
+## 📖 Overview
+
+Dive into an immersive RPG experience where the story evolves in real-time. This project leverages **FastAPI** for a robust backend and **Next.js** for a reactive frontend. Using **LangChain** and **RAG (Retrieval-Augmented Generation)**, the AI narrator weaves unique storylines based on player actions, maintaining world consistency through vector databases.
+
+## ✨ Features
+
+- **🧠 AI Narrator:** Dynamic storytelling powered by OpenAI & LangChain.
+- **⚡ Real-time Gameplay:** WebSocket integration for instant updates and multiplayer interaction.
+- **📚 Context Aware:** Uses RAG (Vector DB) to remember characters, items, and places.
+- **🎨 Interactive UI:** Built with Next.js 16 and styled with Tailwind CSS v4.
+- **💾 Persistent World:** MongoDB storage for characters, quests, and world states.
+
+## 🛠️ Tech Stack
+
+### Frontend
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=flat-square&logo=tailwind-css)
+
+### Backend
+![FastAPI](https://img.shields.io/badge/FastAPI-0.4-009688?style=flat-square&logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python)
+![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?style=flat-square&logo=mongodb)
+![LangChain](https://img.shields.io/badge/LangChain-AI-1C3C3C?style=flat-square&logo=chainlink)
+
+---
+
+## 🚀 Getting Started
+
+Follow these steps to set up the project locally.
+
+### Prerequisites
+
+- **Node.js** (v18+ recommended)
+- **Python** (v3.10+)
+- **MongoDB** (Running locally or a cloud instance)
+- **OpenAI API Key**
+
+### 1. Environment Setup
+
+Create a `.env` file in the root directory:
+
 ```bash
-npm i
-pip install requirements.txt
+MONGO_URL=mongodb://localhost:27017/yourdb
+OPENAI_API_KEY=sk-...
 ```
 
-## Set-up client / frontend
-Run in CLI;
+### 2. Install Dependencies
+
+**Backend:**
+```bash
+pip install -r requirements.txt
 ```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+```
+
+### 3. Run the Application
+
+**Start Backend:**
+```bash
+# From root directory
+fastapi dev backend/main.py
+```
+_Backend runs on: `http://localhost:8000`_
+
+**Start Frontend:**
+```bash
+# In a new terminal, from /frontend directory
 cd frontend
 npm run dev
 ```
+_Frontend runs on: `http://localhost:3000`_
 
-## Set-up backend
-Run in CLI;
+### 4. Optional: Remote Access (ngrok)
+
+To allow other players to join your local server:
+
+1.  Install [ngrok](https://ngrok.com/).
+2.  Expose your frontend:
+    ```bash
+    ngrok http 3000
+    ```
+3.  Share the **Forwarding** URL with players.
+    > *Note: Ensure your backend is running locally.*
+
+---
+
+## 📂 Project Structure
+
 ```bash
-fastapi dev ./backend/main.py
-```
-or
-```bash
-cd backend
-fastapi dev main.py
-```
-
-## Set up ngrok
-Install ngrok on your computer and set up authentication / login. 
-The ngrok set-up guide for CLI: https://dashboard.ngrok.com/get-started/setup/windows
-
-Expose your frontend localhost with CLI command:
-```bash
-ngrok http 3000
+├── 📂 backend/         # FastAPI application, Game Logic, RAG
+│   ├── 📂 db/          # MongoDB & Vector DB handling
+│   ├── 📂 models/      # Pydantic models & LangChain logic
+│   └── 📄 main.py      # Entry point
+├── 📂 frontend/        # Next.js Application
+│   ├── 📂 app/         # App Router & Views
+│   └── 📂 components/  # React Components
+└── 📄 requirements.txt # Python dependencies
 ```
 
-Then copy the address from the "forwarding" field, which can be sent to players to connect.
+## 🤝 Contributing
 
-Make sure that the backend is up and running at localhost:8000.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-# The program
-How the program works, architechture etc. 
+## 📄 License
 
-## Backend
-
-
-## Frontend 
-
+This project is open source.

@@ -1,4 +1,13 @@
 fastapi
+uvicorn[standard]
 pydantic
-langchain_openai
-jupyterlab-chat
+python-dotenv
+pymongo
+langchain
+langchain-openai
+langchain-core
+langchain-community
+langchain-chroma
+langchain-text-splitters
+pypdf
+chromadb
